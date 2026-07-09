@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package video;
+
+option go_package = "shared/proto/video;video";
+
+service VideoService {
+  rpc GeneratePSUrl(GeneratePSUrlRequest) returns (GeneratePSUrlResponse);
+}
+
+message GeneratePSUrlRequest {
+  string FileName=1;
+  string ContentType=2;
+  string FileSize=3;
+}
+
+message GeneratePSUrlResponse {
+  string UploadUrl=1;
+  string ObjectKey=2;
+  int64 ExpiresIn=3;
+}
