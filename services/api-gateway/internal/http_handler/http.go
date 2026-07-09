@@ -10,13 +10,23 @@ import (
 	pb "github.com/AbhijeetDev102/Nimbus/shared/proto/video"
 )
 
+type httpHandler struct {
+	grpcClient *grpcclient.VideoServiceClient
+}
+
+func NewHttpHandler(client *grpcclient.VideoServiceClient) *httpHandler {
+	return &httpHandler{
+		grpcClient: client,
+	}
+}
+
 func writeJSON(w http.ResponseWriter, status int, data any) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	return json.NewEncoder(w).Encode(data)
 }
 
-func HandleUploadUrlRequest(w http.ResponseWriter, r *http.Request) {
+func (h *httpHandler) HandleUploadUrlRequest(w http.ResponseWriter, r *http.Request) {
 	var requestBody types.UploadUrlRequest
 
 	if err := json.NewDecoder(r.Body).Decode(&requestBody); err != nil {
@@ -40,22 +50,23 @@ func HandleUploadUrlRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	grpcClient, err := grpcclient.NewVideoServiceClient()
-	if err != nil {
-		log.Printf("Failed to create video service Grpc client : %v", err)
-		return
-	}
-
-	defer grpcClient.Close()
 	var response *pb.GeneratePSUrlResponse
-	response, err = grpcClient.Client.GeneratePSUrl(r.Context(), &pb.GeneratePSUrlRequest{
+	response, err := h.grpcClient.Client.GeneratePSUrl(r.Context(), &pb.GeneratePSUrlRequest{
 		FileName:    requestBody.FileName,
 		ContentType: requestBody.ContentType,
 		FileSize:    requestBody.FileSize,
 	})
 
 	if err != nil {
-		log.Printf("failed to generate Presigned Url : %v ", err)
+		log.Printf("failed to generate presigned url: %v", err)
+
+		http.Error(
+			w,
+			"failed to generate upload url",
+			http.StatusInternalServerError,
+		)
+
+		return
 	}
 
 	if err := writeJSON(w, http.StatusCreated, types.UploadUrlResponse{
@@ -68,6 +79,6 @@ func HandleUploadUrlRequest(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func HandleCreateJob(w http.ResponseWriter, r *http.Request) {
+func (h *httpHandler) HandleCreateJobRequest(w http.ResponseWriter, r *http.Request) {
 
 }

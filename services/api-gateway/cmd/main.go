@@ -9,7 +9,9 @@ import (
 	"syscall"
 	"time"
 
+	grpcclient "github.com/AbhijeetDev102/Nimbus/services/api-gateway/internal/grpc_client"
 	httphandler "github.com/AbhijeetDev102/Nimbus/services/api-gateway/internal/http_handler"
+
 	"github.com/AbhijeetDev102/Nimbus/services/api-gateway/internal/middleware"
 	"github.com/AbhijeetDev102/Nimbus/shared/env"
 )
@@ -21,8 +23,20 @@ var (
 func main() {
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("POST /video/upload-url", httphandler.HandleUploadUrlRequest)
-	mux.HandleFunc("POST /jobs/create", httphandler.HandleCreateJob)
+	// resuable grpc client and connection
+	grpcClient, err := grpcclient.NewVideoServiceClient()
+	if err != nil {
+		log.Printf("Failed to create video service Grpc client : %v", err)
+		return
+	}
+
+	defer grpcClient.Close()
+
+	//passing the grpc client to http handler constructor
+	httpHandler := httphandler.NewHttpHandler(grpcClient)
+
+	mux.HandleFunc("POST /video/upload-url", httpHandler.HandleUploadUrlRequest)
+	mux.HandleFunc("POST /jobs/create", httpHandler.HandleCreateJobRequest)
 
 	server := &http.Server{
 		Addr:    httpAddr,

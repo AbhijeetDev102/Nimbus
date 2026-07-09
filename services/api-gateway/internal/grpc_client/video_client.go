@@ -8,12 +8,12 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-type videoServiceClient struct {
+type VideoServiceClient struct {
 	Client pb.VideoServiceClient
 	conn   *grpc.ClientConn
 }
 
-func NewVideoServiceClient() (*videoServiceClient, error) {
+func NewVideoServiceClient() (*VideoServiceClient, error) {
 	videoServiceUrl := os.Getenv("VIDEO_SERVICE_URL")
 	if videoServiceUrl == "" {
 		videoServiceUrl = "video-service:9093"
@@ -27,13 +27,13 @@ func NewVideoServiceClient() (*videoServiceClient, error) {
 
 	VideoClient := pb.NewVideoServiceClient(conn)
 
-	return &videoServiceClient{
+	return &VideoServiceClient{
 		Client: VideoClient,
 		conn:   conn,
 	}, nil
 }
 
-func (c videoServiceClient) Close() {
+func (c VideoServiceClient) Close() {
 	if c.conn != nil {
 		if err := c.conn.Close(); err != nil {
 			return
