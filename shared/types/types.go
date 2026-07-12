@@ -3,7 +3,7 @@ package types
 type UploadUrlRequest struct {
 	FileName    string `json:"fileName"`
 	ContentType string `json:"contentType"`
-	FileSize    string `json:"fileSize"`
+	FileSize    int64  `json:"fileSize"`
 }
 type UploadUrlResponse struct {
 	UploadUrl string `json:"uploadUrl"`

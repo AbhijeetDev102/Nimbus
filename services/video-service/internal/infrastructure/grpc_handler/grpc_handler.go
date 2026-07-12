@@ -35,7 +35,7 @@ func (h *grpcHandler) GeneratePSUrl(ctx context.Context, req *pb.GeneratePSUrlRe
 	if fileName == "" {
 		return nil, status.Error(codes.InvalidArgument, "File name is not given")
 	}
-	if fileSize == "" {
+	if fileSize == 0 {
 		return nil, status.Error(codes.InvalidArgument, "File size is not given")
 	}
 	if contentType == "" {

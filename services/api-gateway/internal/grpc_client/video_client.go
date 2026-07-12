@@ -1,8 +1,7 @@
 package grpcclient
 
 import (
-	"os"
-
+	"github.com/AbhijeetDev102/Nimbus/shared/env"
 	pb "github.com/AbhijeetDev102/Nimbus/shared/proto/video"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -14,7 +13,7 @@ type VideoServiceClient struct {
 }
 
 func NewVideoServiceClient() (*VideoServiceClient, error) {
-	videoServiceUrl := os.Getenv("VIDEO_SERVICE_URL")
+	videoServiceUrl := env.GetString("VIDEO_SERVICE_URL", "localhost:9093")
 	if videoServiceUrl == "" {
 		videoServiceUrl = "video-service:9093"
 	}

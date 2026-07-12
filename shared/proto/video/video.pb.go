@@ -25,7 +25,7 @@ type GeneratePSUrlRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	FileName      string                 `protobuf:"bytes,1,opt,name=FileName,proto3" json:"FileName,omitempty"`
 	ContentType   string                 `protobuf:"bytes,2,opt,name=ContentType,proto3" json:"ContentType,omitempty"`
-	FileSize      string                 `protobuf:"bytes,3,opt,name=FileSize,proto3" json:"FileSize,omitempty"`
+	FileSize      int64                  `protobuf:"varint,3,opt,name=FileSize,proto3" json:"FileSize,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -74,11 +74,11 @@ func (x *GeneratePSUrlRequest) GetContentType() string {
 	return ""
 }
 
-func (x *GeneratePSUrlRequest) GetFileSize() string {
+func (x *GeneratePSUrlRequest) GetFileSize() int64 {
 	if x != nil {
 		return x.FileSize
 	}
-	return ""
+	return 0
 }
 
 type GeneratePSUrlResponse struct {
@@ -149,7 +149,7 @@ const file_video_proto_rawDesc = "" +
 	"\x14GeneratePSUrlRequest\x12\x1a\n" +
 	"\bFileName\x18\x01 \x01(\tR\bFileName\x12 \n" +
 	"\vContentType\x18\x02 \x01(\tR\vContentType\x12\x1a\n" +
-	"\bFileSize\x18\x03 \x01(\tR\bFileSize\"q\n" +
+	"\bFileSize\x18\x03 \x01(\x03R\bFileSize\"q\n" +
 	"\x15GeneratePSUrlResponse\x12\x1c\n" +
 	"\tUploadUrl\x18\x01 \x01(\tR\tUploadUrl\x12\x1c\n" +
 	"\tObjectKey\x18\x02 \x01(\tR\tObjectKey\x12\x1c\n" +

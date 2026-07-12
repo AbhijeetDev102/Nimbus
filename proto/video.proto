@@ -11,7 +11,7 @@ service VideoService {
 message GeneratePSUrlRequest {
   string FileName=1;
   string ContentType=2;
-  string FileSize=3;
+  int64 FileSize=3;
 }
 
 message GeneratePSUrlResponse {

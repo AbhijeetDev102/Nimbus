@@ -1,4 +1,4 @@
-package miniorepository
+package repository
 
 import (
 	"context"
