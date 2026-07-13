@@ -1,129 +1,94 @@
 # Nimbus Project Context
 
-## Project Overview
+## Project Vision
 
-**Project Name:** Nimbus
+Project Name: **Nimbus**
 
-**Vision:**
+Nimbus is **NOT** a video transcoding application.
 
-Nimbus is a **Cloud-Native Distributed Media Processing Platform** that processes long-running video workloads asynchronously using an event-driven architecture. The primary goal is to demonstrate backend engineering, distributed systems, cloud-native development, and production-ready architecture rather than simply building a video transcoder.
+Nimbus is a **Cloud-Native Distributed Job Execution Platform** whose first implemented workload is **video transcoding**.
 
-The first supported workload is **video processing**, but the platform is designed so additional workloads (image processing, AI inference, CSV ETL, etc.) can be added later without changing the core platform.
+The platform is designed so that future workloads (image processing, AI inference, document conversion, CSV ETL, etc.) can be added without changing the core execution engine.
 
----
-
-# Primary Goal
-
-This project is being built for:
-
-* Backend Engineering internships
-* Cloud Infrastructure internships
-* Distributed Systems learning
-* Kubernetes experience
-* Resume and interview discussions
-
-The focus is on **system design, architecture, scalability, and fault tolerance**, not frontend development.
+The platform layer should remain completely independent from any specific workload.
 
 ---
 
-# Tech Stack
+# Core Philosophy
 
-## Backend
+Separate the project into two logical layers.
 
-* Go
-* gRPC
-* REST (API Gateway)
+## Platform Layer
 
-## Messaging
+Responsible for:
 
-* Kafka
+* Job creation
+* Scheduling
+* Queueing
+* Execution
+* Retry
+* Cancellation
+* Progress tracking
+* Heartbeats
+* Worker management
+* Scaling
+* Event publishing
+* Observability
 
-## Storage
-
-* PostgreSQL (Source of Truth)
-* Redis (Runtime state)
-* MinIO (Object Storage)
-
-## Infrastructure
-
-* Docker
-* Docker Compose
-* Kubernetes
-* KEDA
-
-## Monitoring
-
-* Prometheus
-* Grafana
-
-## Frontend
-
-* Next.js
+This layer knows nothing about videos.
 
 ---
 
-# Architecture Philosophy
+## Workload Layer
 
-We intentionally separate responsibilities.
+Current workload:
 
-### PostgreSQL
+Video Transcoding
 
-Stores durable data.
+Contains:
 
-Examples:
+* FFmpeg
+* FFprobe
+* Thumbnail generation
+* Preview generation
+* Metadata extraction
 
-* Jobs
-* Upload Sessions
-* Metadata
-* Processing History
+If tomorrow video processing is removed, the Platform Layer should continue functioning.
 
----
-
-### Redis
-
-Stores runtime data.
-
-Examples:
-
-* Job progress
-* Worker heartbeats
-* Cancellation flags
-* Temporary status
-
-Redis is **never** the source of truth.
+This separation is the primary architectural goal.
 
 ---
 
-### Kafka
+# Current Project Progress
 
-Responsible only for event transportation.
+Completed:
 
-Kafka is not used as storage.
+* Kubernetes local development environment using Tilt
+* PostgreSQL StatefulSet
+* MinIO StatefulSet
+* API Gateway
+* gRPC communication
+* Video Service
+* GORM integration
+* UUID based Video model
+* Presigned URL generation
+* Direct upload architecture
+* PostgreSQL metadata persistence
+* Production-style abstractions
+* Repository pattern
+* Environment configuration package
+
+Current estimated completion:
+
+Approximately **35-40%**
+
+Architecture foundation is considered complete.
 
 ---
 
-### MinIO
+# Upload Flow (Final Decision)
 
-Stores:
-
-* Original videos
-* Processed videos
-* Thumbnails
-* Preview clips
-
-No video data is stored inside PostgreSQL.
-
----
-
-# Upload Flow
-
-The upload uses **Presigned URLs**.
-
-Reason:
-
-Large video uploads should **never pass through the backend**.
-
-The backend only generates permission.
+Upload uses Presigned URLs.
 
 Flow:
 
@@ -136,379 +101,543 @@ API Gateway
 ↓
 Video Service
 ↓
-Generate Presigned URL
+Generate UUID
 ↓
-Return URL + Object Key
+Insert Video Metadata (UPLOAD_REQUESTED)
+↓
+Generate Presigned PUT URL
+↓
+Return
 ↓
 Client uploads directly to MinIO
 ↓
-HTTP 200
+HTTP 200 from MinIO
 ↓
 POST /jobs
-↓
-Store metadata
-↓
-Publish event (later through CDC)
 ```
 
-The backend never streams the video.
+Backend never streams video bytes.
+
+Large files never pass through Go services.
 
 ---
 
-# Why Presigned URLs
+# Why Upload and Job Creation are Separate
 
-Benefits:
+Upload success does not automatically imply processing.
 
-* Backend bandwidth remains low
-* Better scalability
-* Industry standard (AWS S3, GCS, Cloudflare R2, MinIO)
-* API only performs orchestration
+Client explicitly decides when processing begins.
 
----
+Flow:
 
-# Upload API
-
-### POST /videos/upload-url
-
-Request
-
-```json
-{
-  "fileName":"holiday.mp4",
-  "contentType":"video/mp4",
-  "fileSize":734003200
-}
+```
+Upload
+↓
+Success
+↓
+POST /jobs
 ```
 
-Response
+This allows:
 
-```json
-{
-  "uploadUrl":"...",
-  "objectKey":"videos/original/<uuid>.mp4",
-  "expiresIn":600
-}
-```
-
-The object key is generated by the backend.
-
-Clients never choose object names.
+* validation
+* authorization
+* duplicate detection
+* object existence verification
+* future quota enforcement
 
 ---
 
 # Job Creation
 
-Upload and job creation are intentionally separate.
+POST /jobs is considered the point where the platform begins processing.
 
-Only after upload succeeds:
+Responsibilities:
 
-```
-POST /jobs
-```
+* Verify object exists in MinIO
+* Update video status
+* Create Job
+* Create Outbox event
+* Commit Transaction
 
-Request
+After commit:
 
-```json
-{
-  "objectKey":"videos/original/<uuid>.mp4",
-  "pipeline":[
-    {
-      "type":"transcode",
-      "resolution":"720p"
-    },
-    {
-      "type":"thumbnail"
-    },
-    {
-      "type":"preview",
-      "duration":10
-    }
-  ]
-}
-```
+Debezium publishes event.
 
-This makes Nimbus a generic processing platform instead of a hardcoded transcoder.
+Workers begin processing.
 
 ---
 
-# Processing Pipeline
+# Current API Structure
 
-The first supported workload is video processing.
-
-Pipeline:
-
-```
-Download
-↓
-Validate
-↓
-Extract Metadata
-↓
-Transcode
-↓
-Generate Thumbnail
-↓
-Generate Preview
-↓
-Upload Results
-↓
-Cleanup
-```
-
-Every stage updates progress.
-
----
-
-# Video Worker
-
-The worker is modular.
-
-Example structure:
-
-```
-worker/
-    consumer/
-    executor/
-    downloader/
-    metadata/
-    ffmpeg/
-    thumbnail/
-    preview/
-    uploader/
-    cleanup/
-```
-
-Each stage is isolated.
-
----
-
-# Current API Gateway
-
-Already implemented:
+Upload URL
 
 ```
 POST /videos/upload-url
 ```
 
-Flow:
+Create Job
 
 ```
-HTTP
-↓
-gRPC
-↓
-Video Service
+POST /jobs
 ```
 
-The API Gateway already acts as a BFF.
+Search
+
+```
+GET /jobs/{id}
+```
+
+Download
+
+Future:
+
+```
+GET /videos/{id}/download
+```
 
 ---
 
-# gRPC
+# PostgreSQL is the Source of Truth
 
-Current proto
+Very important design decision.
 
-```proto
-service VideoService {
-    rpc GeneratePSUrl(GeneratePSUrlRequest)
-        returns (GeneratePSUrlResponse);
-}
-```
-
-Recommendation:
-
-Rename later to `GeneratePresignedUploadURL` or `CreateUploadURL`.
-FileSize should become `int64` instead of string.
-
----
-
-# API Gateway Best Practices
-
-Current improvements discussed:
-
-* Reuse one gRPC connection.
-* Do not create grpc.Dial() per request.
-* Use context timeout.
-* Map gRPC errors to HTTP.
-* Return immediately on RPC failure.
-
----
-
-# Video Service Design
-
-Folder structure:
-
-```
-video-service/
-cmd/
-internal/
-    grpc/
-    service/
-    storage/
-    config/
-    validation/
-```
-
-Responsibilities:
-
-* Validate request
-* Generate UUID object key
-* Generate Presigned URL
-* Return Upload URL
-
-Business logic must stay in service layer.
-gRPC handler should stay thin.
-
----
-
-# High-Level Architecture Decisions
-
-Current architecture includes:
-
-API Gateway -> Video Service -> MinIO -> PostgreSQL -> Kafka -> Worker Pool -> Redis -> WebSocket -> Dashboard
-
-Monitoring: Prometheus -> Grafana
-
----
-
-# Failure Handling
-
-Current design philosophy:
-
-Every arrow in the architecture should answer:
-
-> "What happens if the process crashes here?"
+Every important state change is written to PostgreSQL first.
 
 Examples:
 
-* Crash after upload
-* Crash after DB write
-* Crash before Kafka publish
-* Crash after Kafka receive
-* Crash during transcoding
+* Upload requested
+* Upload completed
+* Job created
+* Processing started
+* Processing completed
+* Failed
+* Cancelled
 
----
-
-# CDC Decision
-
-Dual writes are avoided using CDC.
-
-Instead of:
-
-```
-Save DB
-↓
-Publish Kafka
-```
-
-Final design:
-
-```
-Save DB
-↓
-Commit
-↓
-Debezium
-↓
-Kafka
-```
-
-This avoids losing events if Video Service crashes after committing.
+Kafka is never considered the source of truth.
 
 ---
 
 # Redis Usage
 
-Redis is used only for runtime state.
+Redis stores runtime information only.
 
 Examples:
 
 ```
-progress:<jobId>
-cancel:<jobId>
-heartbeat:<workerId>
-status:<jobId>
+progress:<job>
+heartbeat:<worker>
+cancel:<job>
+lease:<job>
 ```
 
-Redis is not durable storage.
+Redis never stores durable business data.
 
 ---
 
-# Future Components
+# Kafka Usage
 
-Planned:
+Kafka is only responsible for asynchronous work distribution.
 
-* Recovery Service
-* Scheduled Job Watcher
-* Retry Topics
-* Dead Letter Queue
-* Worker Lease
-* Heartbeat Monitoring
-* KEDA Autoscaling
-* Prometheus Metrics
-* Grafana Dashboards
+Kafka should never become the source of truth.
 
 ---
 
-# Current Development Stage
+# CDC Decision
 
-Completed:
+Current decision:
 
-* Project architecture discussions
-* Technology decisions
-* Upload workflow
-* Presigned URL design
-* API Gateway setup
-* gRPC communication
-* Proto definition
-* High-Level Architecture draft
+Use Debezium CDC with the Transactional Outbox Pattern.
 
-Currently implementing:
+Flow:
 
-* Video Service
-* MinIO integration
-* Generate Presigned URL
-* Docker setup for MinIO
+```
+Video Service
+↓
+BEGIN
+↓
+Update Video
+↓
+Insert Job
+↓
+Insert Outbox Event
+↓
+COMMIT
+↓
+Debezium
+↓
+Kafka
+↓
+Workers
+```
 
----
+Application never publishes directly to Kafka (planned architecture).
 
-# Development Philosophy
+Reason:
 
-The project is **not** being built by copying code.
-
-Every feature follows this process:
-
-1. Understand the problem.
-2. Discuss architecture.
-3. Discuss failure cases.
-4. Design APIs.
-5. Implement.
-6. Review.
-7. Improve.
-
-The objective is to learn production backend engineering, not just finish a project.
+Avoid Dual Write Problem.
 
 ---
 
-# Future Roadmap
+# Important Discussion Today
 
-1. Finish Video Service.
-2. Dockerize MinIO.
-3. Generate Presigned URLs.
-4. Upload videos.
-5. Create Upload Sessions.
-6. Create Jobs.
-7. PostgreSQL integration.
-8. Debezium + Kafka.
-9. Worker implementation.
-10. FFmpeg processing.
-11. Redis progress tracking.
-12. WebSocket live updates.
-13. Retry mechanism.
-14. Worker heartbeats.
-15. Recovery service.
-16. Kubernetes deployment.
-17. KEDA autoscaling.
-18. Prometheus metrics.
-19. Grafana dashboards.
-20. Production-ready documentation.
+Question:
+
+"If we are not using database events, why use CDC?"
+
+Answer:
+
+CDC is NOT watching every database update.
+
+CDC should watch an Outbox table.
+
+Application explicitly inserts business events into the Outbox.
+
+Example:
+
+```
+VideoUploaded
+JobCreated
+JobCancelled
+JobCompleted
+```
+
+Debezium transports these events to Kafka.
+
+It is not publishing arbitrary UPDATE statements.
+
+---
+
+# Discussion About Kafka Before PostgreSQL
+
+Question:
+
+Should Kafka sit before PostgreSQL to absorb traffic bursts?
+
+Example:
+
+```
+API
+↓
+Kafka
+↓
+Consumer
+↓
+Database
+```
+
+Decision:
+
+NO.
+
+Reason:
+
+Nimbus is a transactional system.
+
+Client expects:
+
+```
+POST /jobs
+↓
+201 Created
+```
+
+This should guarantee that the job exists.
+
+Database must remain authoritative.
+
+---
+
+Kafka-first architecture is appropriate for:
+
+* Analytics
+* Logs
+* Telemetry
+* IoT
+* Clickstream
+
+Nimbus is not one of these systems.
+
+---
+
+# Handling Database Bursts
+
+Instead of putting Kafka before PostgreSQL, use:
+
+* Connection Pooling
+* Kubernetes Horizontal Scaling
+* Rate Limiting
+* Backpressure
+* Read Replicas (future)
+* PostgreSQL tuning
+
+Only redesign ingestion if platform reaches extremely large scale.
+
+---
+
+# Job Processing Architecture Discussion
+
+Current architecture:
+
+```
+PostgreSQL
+↓
+Debezium
+↓
+Kafka
+↓
+Workers
+```
+
+Original design had:
+
+```
+Kafka
+↓
+JobConsumer
+↓
+Executor Services
+```
+
+Discussion outcome:
+
+If JobConsumer only forwards Kafka messages, it is unnecessary because Kafka Consumer Groups already provide:
+
+* load balancing
+* failover
+* partition assignment
+
+Workers can consume Kafka directly.
+
+---
+
+Future possibility:
+
+Introduce JobConsumer only if it becomes a true Scheduler.
+
+Responsibilities could include:
+
+* Priority scheduling
+* Fair scheduling
+* Tenant quotas
+* Worker capability matching
+* GPU routing
+* Delayed jobs
+* Cron scheduling
+
+Until then,
+
+Workers should consume Kafka directly.
+
+---
+
+# Worker Philosophy
+
+Workers are NOT "Video Workers."
+
+Workers are generic Job Executors.
+
+Current mental model:
+
+Bad:
+
+```
+ProcessVideo(videoID)
+```
+
+Preferred:
+
+```
+Execute(Job)
+```
+
+Dispatcher:
+
+```
+switch(job.Type)
+VIDEO
+IMAGE
+CSV
+AI
+PDF
+```
+
+Workers should execute handlers rather than being hardcoded to video logic.
+
+---
+
+# Event Payload Philosophy
+
+Workers should receive complete Job information.
+
+Example:
+
+```
+JobID
+VideoID
+ObjectKey
+Pipeline
+RetryCount
+Priority
+TenantID
+```
+
+Workers should not immediately query PostgreSQL just to know what to execute.
+
+---
+
+# Worker Lifecycle
+
+```
+Receive Kafka Message
+↓
+Update DB Status = RUNNING
+↓
+Download From MinIO
+↓
+FFprobe
+↓
+FFmpeg
+↓
+Thumbnail
+↓
+Upload Result
+↓
+Update PostgreSQL
+↓
+Insert Outbox Event
+↓
+Commit
+↓
+Kafka Offset Commit
+```
+
+Offset should only be committed after successful database transaction.
+
+---
+
+# Failure Philosophy
+
+Every arrow in the architecture must answer:
+
+"What happens if the process crashes here?"
+
+Examples:
+
+* Crash after upload
+* Crash before Kafka publish
+* Crash after worker download
+* Crash before DB update
+* Crash after upload but before offset commit
+
+System should be designed around failure handling.
+
+---
+
+# Current Architectural Insight
+
+Most important realization from today's discussion:
+
+Nimbus should not be presented as:
+
+"A Video Transcoding Platform."
+
+Instead:
+
+"A Cloud-Native Distributed Job Execution Platform with Video Transcoding as its first workload."
+
+This distinction changes the architecture.
+
+Platform:
+
+* Scheduler
+* Worker
+* Queue
+* Retry
+* Scaling
+* Monitoring
+
+Workload:
+
+* FFmpeg
+* Video Processing
+
+Platform should remain reusable.
+
+---
+
+# Folder Organization Philosophy
+
+Whenever creating packages ask:
+
+Platform?
+
+or
+
+Video-specific?
+
+Platform examples:
+
+```
+scheduler/
+worker/
+dispatcher/
+retry/
+heartbeat/
+progress/
+queue/
+events/
+```
+
+Video-specific:
+
+```
+ffmpeg/
+thumbnail/
+preview/
+metadata/
+transcoder/
+```
+
+Never mix workload logic into the execution platform.
+
+---
+
+# Immediate Next Step
+
+Next implementation task:
+
+Design and implement:
+
+```
+POST /jobs
+```
+
+Responsibilities:
+
+* Verify MinIO object exists
+* Update video status
+* Create Job
+* Insert Outbox event
+* Commit transaction
+
+After this:
+
+* Integrate Debezium
+* Kafka
+* Worker Consumer Group
+* Generic Worker Dispatcher
+
+No new technologies should be introduced before completing this pipeline.
+
+---
+
+# Overall Project Goal
+
+By completion, Nimbus should resemble a production backend infrastructure product rather than a student project.
+
+Desired interview description:
+
+> "Nimbus is a cloud-native distributed job execution platform that reliably executes long-running asynchronous workloads. The platform provides scheduling, retries, worker orchestration, progress tracking, observability, and fault recovery. Video transcoding is implemented as the first workload to demonstrate the platform's capabilities."
+
+This is the guiding architectural vision going forward.
