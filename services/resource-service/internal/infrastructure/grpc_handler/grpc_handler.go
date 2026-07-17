@@ -31,6 +31,7 @@ func (h *grpcHandler) GeneratePSUrl(ctx context.Context, req *pb.GeneratePSUrlRe
 	fileName := req.GetFileName()
 	fileSize := req.GetFileSize()
 	contentType := req.GetContentType()
+	resourceType := req.GetResourceType()
 
 	if fileName == "" {
 		return nil, status.Error(codes.InvalidArgument, "File name is not given")
@@ -41,11 +42,15 @@ func (h *grpcHandler) GeneratePSUrl(ctx context.Context, req *pb.GeneratePSUrlRe
 	if contentType == "" {
 		return nil, status.Error(codes.InvalidArgument, "Content type is not given")
 	}
+	if resourceType == "" {
+		return nil, status.Error(codes.InvalidArgument, "Resource type is not given")
+	}
 
 	response, err := h.service.GeneratePSUrl(ctx, &types.UploadUrlRequest{
-		ContentType: contentType,
-		FileName:    fileName,
-		FileSize:    fileSize,
+		ContentType:  contentType,
+		FileName:     fileName,
+		FileSize:     fileSize,
+		ResourceType: resourceType,
 	})
 
 	if err != nil {

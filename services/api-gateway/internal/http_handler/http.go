@@ -51,12 +51,17 @@ func (h *httpHandler) HandleUploadUrlRequest(w http.ResponseWriter, r *http.Requ
 		http.Error(w, "file size is not specified", http.StatusBadRequest)
 		return
 	}
+	if requestBody.ResourceType == "" {
+		http.Error(w, "file size is not specified", http.StatusBadRequest)
+		return
+	}
 
 	var response *pb.GeneratePSUrlResponse
 	response, err := h.grpcClient.Client.GeneratePSUrl(r.Context(), &pb.GeneratePSUrlRequest{
-		FileName:    requestBody.FileName,
-		ContentType: requestBody.ContentType,
-		FileSize:    requestBody.FileSize,
+		FileName:     requestBody.FileName,
+		ContentType:  requestBody.ContentType,
+		FileSize:     requestBody.FileSize,
+		ResourceType: requestBody.ResourceType,
 	})
 
 	if err != nil {

@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/AbhijeetDev102/Nimbus/services/resource-service/internal/domain"
+	"github.com/AbhijeetDev102/Nimbus/shared/env"
 	"github.com/AbhijeetDev102/Nimbus/shared/types"
 	"github.com/google/uuid"
 )
@@ -30,12 +31,15 @@ func (s *Service) GeneratePSUrl(ctx context.Context, req *types.UploadUrlRequest
 	objectKey := "resource/original/" + randString + ".mp4"
 
 	resourceMetadata := &domain.Resource{
-		ID:               ID,
-		OriginalFileName: req.FileName,
-		ObjectKey:        objectKey,
-		SizeBytes:        req.FileSize,
-		ContentType:      req.ContentType,
-		Status:           "Pending",
+		ID:              ID,
+		Name:            req.FileName,
+		ResourceType:    domain.ResourceType(req.ResourceType),
+		StorageProvider: domain.MinIO,
+		Bucket:          env.GetString("MINIO_BUCKET_NAME", ""),
+		ObjectKey:       objectKey,
+		SizeBytes:       req.FileSize,
+		ContentType:     req.ContentType,
+		Status:          domain.UploadRequested,
 	}
 
 	if err := s.metadata.CreateResource(ctx, resourceMetadata); err != nil {

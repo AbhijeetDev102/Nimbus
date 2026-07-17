@@ -22,15 +22,33 @@ const (
 	Failed ResourceStatus = "FAILED"
 )
 
+type ResourceType string
+
+const (
+	VideoResource    ResourceType = "VIDEO"
+	ImageResource    ResourceType = "IMAGE"
+	DocumentResource ResourceType = "DOCUMENT"
+)
+
+type StorageType string
+
+const (
+	MinIO StorageType = "MINIO"
+	S3    StorageType = "S3"
+)
+
 type Resource struct {
-	ID               uuid.UUID
-	OriginalFileName string
-	ObjectKey        string
-	SizeBytes        int64
-	ContentType      string
-	Status           ResourceStatus
-	CreatedAt        time.Time
-	UpdatedAt        time.Time
+	ID              uuid.UUID
+	Name            string
+	ResourceType    ResourceType
+	StorageProvider StorageType
+	Bucket          string
+	ObjectKey       string
+	SizeBytes       int64
+	ContentType     string
+	Status          ResourceStatus
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
 }
 
 type StorageProvider interface {

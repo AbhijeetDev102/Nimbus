@@ -26,6 +26,7 @@ type GeneratePSUrlRequest struct {
 	FileName      string                 `protobuf:"bytes,1,opt,name=FileName,proto3" json:"FileName,omitempty"`
 	ContentType   string                 `protobuf:"bytes,2,opt,name=ContentType,proto3" json:"ContentType,omitempty"`
 	FileSize      int64                  `protobuf:"varint,3,opt,name=FileSize,proto3" json:"FileSize,omitempty"`
+	ResourceType  string                 `protobuf:"bytes,4,opt,name=ResourceType,proto3" json:"ResourceType,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -79,6 +80,13 @@ func (x *GeneratePSUrlRequest) GetFileSize() int64 {
 		return x.FileSize
 	}
 	return 0
+}
+
+func (x *GeneratePSUrlRequest) GetResourceType() string {
+	if x != nil {
+		return x.ResourceType
+	}
+	return ""
 }
 
 type GeneratePSUrlResponse struct {
@@ -145,11 +153,12 @@ var File_resource_proto protoreflect.FileDescriptor
 
 const file_resource_proto_rawDesc = "" +
 	"\n" +
-	"\x0eresource.proto\x12\bresource\"p\n" +
+	"\x0eresource.proto\x12\bresource\"\x94\x01\n" +
 	"\x14GeneratePSUrlRequest\x12\x1a\n" +
 	"\bFileName\x18\x01 \x01(\tR\bFileName\x12 \n" +
 	"\vContentType\x18\x02 \x01(\tR\vContentType\x12\x1a\n" +
-	"\bFileSize\x18\x03 \x01(\x03R\bFileSize\"q\n" +
+	"\bFileSize\x18\x03 \x01(\x03R\bFileSize\x12\"\n" +
+	"\fResourceType\x18\x04 \x01(\tR\fResourceType\"q\n" +
 	"\x15GeneratePSUrlResponse\x12\x1c\n" +
 	"\tUploadUrl\x18\x01 \x01(\tR\tUploadUrl\x12\x1c\n" +
 	"\tObjectKey\x18\x02 \x01(\tR\tObjectKey\x12\x1c\n" +

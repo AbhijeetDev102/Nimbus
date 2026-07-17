@@ -12,6 +12,7 @@ message GeneratePSUrlRequest {
   string FileName=1;
   string ContentType=2;
   int64 FileSize=3;
+  string ResourceType=4;
 }
 
 message GeneratePSUrlResponse {
