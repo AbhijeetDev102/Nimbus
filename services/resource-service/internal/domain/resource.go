@@ -8,7 +8,7 @@ import (
 	"github.com/google/uuid"
 )
 
-type Video struct {
+type Resource struct {
 	ID               uuid.UUID
 	OriginalFileName string
 	ObjectKey        string
@@ -24,9 +24,9 @@ type StorageRepository interface {
 }
 
 type MetaDataRepository interface {
-	CreateVideo(ctx context.Context, video *Video) error
+	CreateResource(ctx context.Context, resource *Resource) error
 }
 
-type VideoService interface {
+type ResourceService interface {
 	GeneratePSUrl(ctx context.Context, req *types.UploadUrlRequest) (*types.UploadUrlResponse, error)
 }

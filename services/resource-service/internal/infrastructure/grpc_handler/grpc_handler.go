@@ -3,8 +3,8 @@ package grpchandler
 import (
 	"context"
 
-	"github.com/AbhijeetDev102/Nimbus/services/video-service/internal/domain"
-	pb "github.com/AbhijeetDev102/Nimbus/shared/proto/video"
+	"github.com/AbhijeetDev102/Nimbus/services/resource-service/internal/domain"
+	pb "github.com/AbhijeetDev102/Nimbus/shared/proto/resource"
 	"github.com/AbhijeetDev102/Nimbus/shared/types"
 
 	"google.golang.org/grpc"
@@ -13,16 +13,16 @@ import (
 )
 
 type grpcHandler struct {
-	pb.UnimplementedVideoServiceServer
-	service domain.VideoService
+	pb.UnimplementedResourceServiceServer
+	service domain.ResourceService
 }
 
-func NewGrpcHandler(server *grpc.Server, service domain.VideoService) *grpcHandler {
+func NewGrpcHandler(server *grpc.Server, service domain.ResourceService) *grpcHandler {
 	handler := &grpcHandler{
 		service: service,
 	}
 
-	pb.RegisterVideoServiceServer(server, handler)
+	pb.RegisterResourceServiceServer(server, handler)
 	return handler
 
 }

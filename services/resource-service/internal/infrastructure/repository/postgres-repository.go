@@ -3,7 +3,7 @@ package repository
 import (
 	"context"
 
-	"github.com/AbhijeetDev102/Nimbus/services/video-service/internal/domain"
+	"github.com/AbhijeetDev102/Nimbus/services/resource-service/internal/domain"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
@@ -18,16 +18,16 @@ func NewPostgresInstance(dns string) (*postgresInstance, error) {
 	if err != nil {
 		return nil, err
 	}
-	db.AutoMigrate(&domain.Video{})
+	db.AutoMigrate(&domain.Resource{})
 
 	return &postgresInstance{
 		Client: db,
 	}, nil
 }
 
-func (p *postgresInstance) CreateVideo(ctx context.Context, video *domain.Video) error {
+func (p *postgresInstance) CreateResource(ctx context.Context, resource *domain.Resource) error {
 
-	err := p.Client.WithContext(ctx).Create(video).Error
+	err := p.Client.WithContext(ctx).Create(resource).Error
 	if err != nil {
 		return err
 	}

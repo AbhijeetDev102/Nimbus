@@ -1,10 +1,10 @@
 syntax = "proto3";
 
-package video;
+package resource;
 
-option go_package = "shared/proto/video;video";
+option go_package = "shared/proto/resource;resource";
 
-service VideoService {
+service ResourceService {
   rpc GeneratePSUrl(GeneratePSUrlRequest) returns (GeneratePSUrlResponse);
 }
 

@@ -2,37 +2,37 @@ package grpcclient
 
 import (
 	"github.com/AbhijeetDev102/Nimbus/shared/env"
-	pb "github.com/AbhijeetDev102/Nimbus/shared/proto/video"
+	pb "github.com/AbhijeetDev102/Nimbus/shared/proto/resource"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-type VideoServiceClient struct {
-	Client pb.VideoServiceClient
+type ResourceServiceClient struct {
+	Client pb.ResourceServiceClient
 	conn   *grpc.ClientConn
 }
 
-func NewVideoServiceClient() (*VideoServiceClient, error) {
-	videoServiceUrl := env.GetString("VIDEO_SERVICE_URL", "localhost:9093")
-	if videoServiceUrl == "" {
-		videoServiceUrl = "video-service:9093"
+func NewResourceServiceClient() (*ResourceServiceClient, error) {
+	resourceServiceUrl := env.GetString("RESOURCE_SERVICE_URL", "localhost:9093")
+	if resourceServiceUrl == "" {
+		resourceServiceUrl = "resource-service:9093"
 	}
 
-	conn, err := grpc.NewClient(videoServiceUrl, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.NewClient(resourceServiceUrl, grpc.WithTransportCredentials(insecure.NewCredentials()))
 
 	if err != nil {
 		return nil, err
 	}
 
-	VideoClient := pb.NewVideoServiceClient(conn)
+	ResourceClient := pb.NewResourceServiceClient(conn)
 
-	return &VideoServiceClient{
-		Client: VideoClient,
+	return &ResourceServiceClient{
+		Client: ResourceClient,
 		conn:   conn,
 	}, nil
 }
 
-func (c VideoServiceClient) Close() {
+func (c ResourceServiceClient) Close() {
 	if c.conn != nil {
 		if err := c.conn.Close(); err != nil {
 			return

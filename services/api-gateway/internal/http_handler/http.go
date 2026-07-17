@@ -6,15 +6,15 @@ import (
 	"net/http"
 
 	grpcclient "github.com/AbhijeetDev102/Nimbus/services/api-gateway/internal/grpc_client"
-	pb "github.com/AbhijeetDev102/Nimbus/shared/proto/video"
+	pb "github.com/AbhijeetDev102/Nimbus/shared/proto/resource"
 	"github.com/AbhijeetDev102/Nimbus/shared/types"
 )
 
 type httpHandler struct {
-	grpcClient *grpcclient.VideoServiceClient
+	grpcClient *grpcclient.ResourceServiceClient
 }
 
-func NewHttpHandler(client *grpcclient.VideoServiceClient) *httpHandler {
+func NewHttpHandler(client *grpcclient.ResourceServiceClient) *httpHandler {
 	return &httpHandler{
 		grpcClient: client,
 	}

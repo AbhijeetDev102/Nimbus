@@ -6,12 +6,12 @@ import (
 	"log"
 	"net"
 
-	grpchandler "github.com/AbhijeetDev102/Nimbus/services/video-service/internal/infrastructure/grpc_handler"
-	"github.com/AbhijeetDev102/Nimbus/services/video-service/internal/infrastructure/repository"
+	grpchandler "github.com/AbhijeetDev102/Nimbus/services/resource-service/internal/infrastructure/grpc_handler"
+	"github.com/AbhijeetDev102/Nimbus/services/resource-service/internal/infrastructure/repository"
 	"github.com/AbhijeetDev102/Nimbus/shared/env"
 	"github.com/joho/godotenv"
 
-	"github.com/AbhijeetDev102/Nimbus/services/video-service/internal/service"
+	"github.com/AbhijeetDev102/Nimbus/services/resource-service/internal/service"
 	"google.golang.org/grpc"
 )
 
@@ -30,7 +30,7 @@ func main() {
 	useSSL := env.GetBool("MINIO_USE_SSL", false)            // Set to true if your self-hosted instance uses HTTPS
 
 	// 2. Initialize the MinIO Client
-	bucketName := env.GetString("MINIO_BUCKET_NAME", "video-bucket")
+	bucketName := env.GetString("MINIO_BUCKET_NAME", "resource-bucket")
 	minioInstance, err := repository.NewMinioInstance(endpoint, accessKeyID, secretAccessKey, useSSL, bucketName)
 	if err != nil {
 		log.Fatalln("Failed to initialize MinIO client:", err)
@@ -61,7 +61,7 @@ func main() {
 	err = minioInstance.EnsureBucketExists(ctx)
 
 	if err != nil {
-		log.Fatalln("Failed to ensure video bucket exists:", err)
+		log.Fatalln("Failed to ensure resource bucket exists:", err)
 	}
 
 	fmt.Printf("Successfully ensured bucket '%s' is ready.\n", bucketName)

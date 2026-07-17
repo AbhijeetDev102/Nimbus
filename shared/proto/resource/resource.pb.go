@@ -2,9 +2,9 @@
 // versions:
 // 	protoc-gen-go v1.36.11
 // 	protoc        v3.21.12
-// source: video.proto
+// source: resource.proto
 
-package video
+package resource
 
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
@@ -32,7 +32,7 @@ type GeneratePSUrlRequest struct {
 
 func (x *GeneratePSUrlRequest) Reset() {
 	*x = GeneratePSUrlRequest{}
-	mi := &file_video_proto_msgTypes[0]
+	mi := &file_resource_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -44,7 +44,7 @@ func (x *GeneratePSUrlRequest) String() string {
 func (*GeneratePSUrlRequest) ProtoMessage() {}
 
 func (x *GeneratePSUrlRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_video_proto_msgTypes[0]
+	mi := &file_resource_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -57,7 +57,7 @@ func (x *GeneratePSUrlRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GeneratePSUrlRequest.ProtoReflect.Descriptor instead.
 func (*GeneratePSUrlRequest) Descriptor() ([]byte, []int) {
-	return file_video_proto_rawDescGZIP(), []int{0}
+	return file_resource_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *GeneratePSUrlRequest) GetFileName() string {
@@ -92,7 +92,7 @@ type GeneratePSUrlResponse struct {
 
 func (x *GeneratePSUrlResponse) Reset() {
 	*x = GeneratePSUrlResponse{}
-	mi := &file_video_proto_msgTypes[1]
+	mi := &file_resource_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -104,7 +104,7 @@ func (x *GeneratePSUrlResponse) String() string {
 func (*GeneratePSUrlResponse) ProtoMessage() {}
 
 func (x *GeneratePSUrlResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_video_proto_msgTypes[1]
+	mi := &file_resource_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -117,7 +117,7 @@ func (x *GeneratePSUrlResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GeneratePSUrlResponse.ProtoReflect.Descriptor instead.
 func (*GeneratePSUrlResponse) Descriptor() ([]byte, []int) {
-	return file_video_proto_rawDescGZIP(), []int{1}
+	return file_resource_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *GeneratePSUrlResponse) GetUploadUrl() string {
@@ -141,11 +141,11 @@ func (x *GeneratePSUrlResponse) GetExpiresIn() int64 {
 	return 0
 }
 
-var File_video_proto protoreflect.FileDescriptor
+var File_resource_proto protoreflect.FileDescriptor
 
-const file_video_proto_rawDesc = "" +
+const file_resource_proto_rawDesc = "" +
 	"\n" +
-	"\vvideo.proto\x12\x05video\"p\n" +
+	"\x0eresource.proto\x12\bresource\"p\n" +
 	"\x14GeneratePSUrlRequest\x12\x1a\n" +
 	"\bFileName\x18\x01 \x01(\tR\bFileName\x12 \n" +
 	"\vContentType\x18\x02 \x01(\tR\vContentType\x12\x1a\n" +
@@ -153,30 +153,30 @@ const file_video_proto_rawDesc = "" +
 	"\x15GeneratePSUrlResponse\x12\x1c\n" +
 	"\tUploadUrl\x18\x01 \x01(\tR\tUploadUrl\x12\x1c\n" +
 	"\tObjectKey\x18\x02 \x01(\tR\tObjectKey\x12\x1c\n" +
-	"\tExpiresIn\x18\x03 \x01(\x03R\tExpiresIn2Z\n" +
-	"\fVideoService\x12J\n" +
-	"\rGeneratePSUrl\x12\x1b.video.GeneratePSUrlRequest\x1a\x1c.video.GeneratePSUrlResponseB\x1aZ\x18shared/proto/video;videob\x06proto3"
+	"\tExpiresIn\x18\x03 \x01(\x03R\tExpiresIn2c\n" +
+	"\x0fResourceService\x12P\n" +
+	"\rGeneratePSUrl\x12\x1e.resource.GeneratePSUrlRequest\x1a\x1f.resource.GeneratePSUrlResponseB Z\x1eshared/proto/resource;resourceb\x06proto3"
 
 var (
-	file_video_proto_rawDescOnce sync.Once
-	file_video_proto_rawDescData []byte
+	file_resource_proto_rawDescOnce sync.Once
+	file_resource_proto_rawDescData []byte
 )
 
-func file_video_proto_rawDescGZIP() []byte {
-	file_video_proto_rawDescOnce.Do(func() {
-		file_video_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_video_proto_rawDesc), len(file_video_proto_rawDesc)))
+func file_resource_proto_rawDescGZIP() []byte {
+	file_resource_proto_rawDescOnce.Do(func() {
+		file_resource_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_resource_proto_rawDesc), len(file_resource_proto_rawDesc)))
 	})
-	return file_video_proto_rawDescData
+	return file_resource_proto_rawDescData
 }
 
-var file_video_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
-var file_video_proto_goTypes = []any{
-	(*GeneratePSUrlRequest)(nil),  // 0: video.GeneratePSUrlRequest
-	(*GeneratePSUrlResponse)(nil), // 1: video.GeneratePSUrlResponse
+var file_resource_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_resource_proto_goTypes = []any{
+	(*GeneratePSUrlRequest)(nil),  // 0: resource.GeneratePSUrlRequest
+	(*GeneratePSUrlResponse)(nil), // 1: resource.GeneratePSUrlResponse
 }
-var file_video_proto_depIdxs = []int32{
-	0, // 0: video.VideoService.GeneratePSUrl:input_type -> video.GeneratePSUrlRequest
-	1, // 1: video.VideoService.GeneratePSUrl:output_type -> video.GeneratePSUrlResponse
+var file_resource_proto_depIdxs = []int32{
+	0, // 0: resource.ResourceService.GeneratePSUrl:input_type -> resource.GeneratePSUrlRequest
+	1, // 1: resource.ResourceService.GeneratePSUrl:output_type -> resource.GeneratePSUrlResponse
 	1, // [1:2] is the sub-list for method output_type
 	0, // [0:1] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name
@@ -184,26 +184,26 @@ var file_video_proto_depIdxs = []int32{
 	0, // [0:0] is the sub-list for field type_name
 }
 
-func init() { file_video_proto_init() }
-func file_video_proto_init() {
-	if File_video_proto != nil {
+func init() { file_resource_proto_init() }
+func file_resource_proto_init() {
+	if File_resource_proto != nil {
 		return
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_video_proto_rawDesc), len(file_video_proto_rawDesc)),
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_resource_proto_rawDesc), len(file_resource_proto_rawDesc)),
 			NumEnums:      0,
 			NumMessages:   2,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
-		GoTypes:           file_video_proto_goTypes,
-		DependencyIndexes: file_video_proto_depIdxs,
-		MessageInfos:      file_video_proto_msgTypes,
+		GoTypes:           file_resource_proto_goTypes,
+		DependencyIndexes: file_resource_proto_depIdxs,
+		MessageInfos:      file_resource_proto_msgTypes,
 	}.Build()
-	File_video_proto = out.File
-	file_video_proto_goTypes = nil
-	file_video_proto_depIdxs = nil
+	File_resource_proto = out.File
+	file_resource_proto_goTypes = nil
+	file_resource_proto_depIdxs = nil
 }

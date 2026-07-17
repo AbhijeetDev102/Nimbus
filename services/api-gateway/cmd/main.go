@@ -24,9 +24,9 @@ func main() {
 	mux := http.NewServeMux()
 
 	// resuable grpc client and connection
-	grpcClient, err := grpcclient.NewVideoServiceClient()
+	grpcClient, err := grpcclient.NewResourceServiceClient()
 	if err != nil {
-		log.Printf("Failed to create video service Grpc client : %v", err)
+		log.Printf("Failed to create resource service Grpc client : %v", err)
 		return
 	}
 
@@ -35,7 +35,7 @@ func main() {
 	//passing the grpc client to http handler constructor
 	httpHandler := httphandler.NewHttpHandler(grpcClient)
 
-	mux.HandleFunc("POST /video/upload-url", httpHandler.HandleUploadUrlRequest)
+	mux.HandleFunc("POST /resource/upload-url", httpHandler.HandleUploadUrlRequest)
 	mux.HandleFunc("POST /jobs/create", httpHandler.HandleCreateJobRequest)
 
 	server := &http.Server{

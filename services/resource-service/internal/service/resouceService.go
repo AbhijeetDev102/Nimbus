@@ -3,7 +3,7 @@ package service
 import (
 	"context"
 
-	"github.com/AbhijeetDev102/Nimbus/services/video-service/internal/domain"
+	"github.com/AbhijeetDev102/Nimbus/services/resource-service/internal/domain"
 	"github.com/AbhijeetDev102/Nimbus/shared/types"
 	"github.com/google/uuid"
 )
@@ -27,9 +27,9 @@ func (s *Service) GeneratePSUrl(ctx context.Context, req *types.UploadUrlRequest
 		return nil, err
 	}
 
-	objectKey := "video/original/" + randString + ".mp4"
+	objectKey := "resource/original/" + randString + ".mp4"
 
-	videoMetadata := &domain.Video{
+	resourceMetadata := &domain.Resource{
 		ID:               ID,
 		OriginalFileName: req.FileName,
 		ObjectKey:        objectKey,
@@ -38,7 +38,7 @@ func (s *Service) GeneratePSUrl(ctx context.Context, req *types.UploadUrlRequest
 		Status:           "Pending",
 	}
 
-	if err := s.metadata.CreateVideo(ctx, videoMetadata); err != nil {
+	if err := s.metadata.CreateResource(ctx, resourceMetadata); err != nil {
 		return nil, err
 	}
 
