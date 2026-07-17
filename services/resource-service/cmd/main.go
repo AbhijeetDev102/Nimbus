@@ -7,7 +7,8 @@ import (
 	"net"
 
 	grpchandler "github.com/AbhijeetDev102/Nimbus/services/resource-service/internal/infrastructure/grpc_handler"
-	"github.com/AbhijeetDev102/Nimbus/services/resource-service/internal/infrastructure/repository"
+	"github.com/AbhijeetDev102/Nimbus/services/resource-service/internal/infrastructure/repository/persistence"
+	"github.com/AbhijeetDev102/Nimbus/services/resource-service/internal/infrastructure/repository/storage"
 	"github.com/AbhijeetDev102/Nimbus/shared/env"
 	"github.com/joho/godotenv"
 
@@ -31,7 +32,7 @@ func main() {
 
 	// 2. Initialize the MinIO Client
 	bucketName := env.GetString("MINIO_BUCKET_NAME", "resource-bucket")
-	minioInstance, err := repository.NewMinioInstance(endpoint, accessKeyID, secretAccessKey, useSSL, bucketName)
+	minioInstance, err := storage.NewMinioInstance(endpoint, accessKeyID, secretAccessKey, useSSL, bucketName)
 	if err != nil {
 		log.Fatalln("Failed to initialize MinIO client:", err)
 	}
@@ -45,12 +46,12 @@ func main() {
 	db_name := env.GetString("POSTGRES_DB_NAME", "")
 	dns := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=5432 sslmode=disable", hostName, user, password, db_name)
 
-	postgresInstance, err := repository.NewPostgresInstance(dns)
+	postgresInstance, err := persistence.NewPostgresInstance(dns)
 	if err != nil {
 		log.Fatalln("Failed to connect to Postgres:", err)
 	}
 	log.Println("SUccessfully connected to Postgres instance")
-	srv := service.NewSerice(minioInstance, postgresInstance)
+	srv := service.NewService(minioInstance, postgresInstance)
 
 	// grpc server initialization
 	grpcServer := grpc.NewServer()

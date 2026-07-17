@@ -8,22 +8,36 @@ import (
 	"github.com/google/uuid"
 )
 
+type ResourceStatus string
+
+const (
+	UploadRequested ResourceStatus = "UPLOAD_REQUESTED"
+
+	Uploaded ResourceStatus = "UPLOADED"
+
+	Processing ResourceStatus = "PROCESSING"
+
+	Completed ResourceStatus = "COMPLETED"
+
+	Failed ResourceStatus = "FAILED"
+)
+
 type Resource struct {
 	ID               uuid.UUID
 	OriginalFileName string
 	ObjectKey        string
 	SizeBytes        int64
 	ContentType      string
-	Status           string
+	Status           ResourceStatus
 	CreatedAt        time.Time
 	UpdatedAt        time.Time
 }
 
-type StorageRepository interface {
+type StorageProvider interface {
 	GeneratePSUrl(ctx context.Context, objectKey string, expireIn int64) (*types.UploadUrlResponse, error)
 }
 
-type MetaDataRepository interface {
+type ResourceRepository interface {
 	CreateResource(ctx context.Context, resource *Resource) error
 }
 

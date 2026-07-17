@@ -9,11 +9,11 @@ import (
 )
 
 type Service struct {
-	storage  domain.StorageRepository
-	metadata domain.MetaDataRepository
+	storage  domain.StorageProvider
+	metadata domain.ResourceRepository
 }
 
-func NewSerice(storgae domain.StorageRepository, metadata domain.MetaDataRepository) *Service {
+func NewService(storgae domain.StorageProvider, metadata domain.ResourceRepository) *Service {
 	return &Service{
 		storage:  storgae,
 		metadata: metadata,

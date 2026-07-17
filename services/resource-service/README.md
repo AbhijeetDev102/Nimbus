@@ -7,7 +7,7 @@ This service handles all video-related operations in the system.
 The service follows Clean Architecture principles with the following structure:
 
 ```
-services/video-service/
+services/resouce-service/
 ├── cmd/                    # Application entry points
 │   └── main.go            # Main application setup
 ├── internal/              # Private application code

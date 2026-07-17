@@ -59,6 +59,22 @@ This separation is the primary architectural goal.
 
 ---
 
+# The 4-Core Service Architecture
+
+Nimbus is composed of four primary microservices (with an optional fifth for search), designed to strictly separate responsibilities:
+
+| Service | Responsibility |
+|---|---|
+| **API Gateway** | Routes external requests via REST and WebSocket. |
+| **Resource Service** | Uploads, metadata, storage abstraction. Knows about resources, not jobs. |
+| **Job Service** | Creates and manages jobs, publishes events via Outbox. Knows about jobs, not execution. |
+| **Worker Service** | Event-driven execution engine. Consumes from Kafka, runs tasks (video, image, etc.), updates progress. No HTTP API. |
+| **Search Service (Optional)** | Read-only queries and filtering. |
+
+*Note: The "Scheduler" is handled natively by Kafka Consumer Groups. The "Dispatcher" is simply a Go package inside the Worker Service.*
+
+---
+
 # Current Project Progress
 
 Completed:
@@ -68,9 +84,9 @@ Completed:
 * MinIO StatefulSet
 * API Gateway
 * gRPC communication
-* Video Service
+* Resource Service
 * GORM integration
-* UUID based Video model
+* UUID based Resource model
 * Presigned URL generation
 * Direct upload architecture
 * PostgreSQL metadata persistence
@@ -99,7 +115,7 @@ POST /videos/upload-url
 ↓
 API Gateway
 ↓
-Video Service
+Resource Service
 ↓
 Generate UUID
 ↓
@@ -252,7 +268,7 @@ Use Debezium CDC with the Transactional Outbox Pattern.
 Flow:
 
 ```
-Video Service
+Resource Service
 ↓
 BEGIN
 ↓
@@ -563,6 +579,28 @@ Workload:
 * Video Processing
 
 Platform should remain reusable.
+
+---
+
+# Clean Architecture Guidelines
+
+Nimbus adheres strictly to Hexagonal (Ports & Adapters) Architecture.
+
+## Domain Naming & Interfaces
+The domain defines **what it needs (Ports)**, not **how it's implemented (Adapters)**. 
+- `ResourceRepository`: Manages CRUD operations for the Resource domain entity (implemented by PostgreSQL).
+- `StorageProvider`: Manages blob storage operations like generating presigned URLs or checking object existence (implemented by MinIO/S3).
+
+## Infrastructure Separation
+Infrastructure (Adapters) must be explicitly separated by technology type inside the `internal/infrastructure/` folder:
+- `persistence/`: Adapters for databases (e.g., `postgres.go`).
+- `storage/`: Adapters for object storage (e.g., `minio.go`, `s3.go`).
+- `grpc/`: Adapters for gRPC handlers.
+- `events/`: Adapters for message brokers (Kafka/RabbitMQ).
+
+## Domain Modeling
+- Always use strongly typed enums instead of raw strings for status fields (e.g., `type ResourceStatus string`).
+- Models should be storage-agnostic but track where they live (e.g., `StorageProvider` and `Bucket` fields) to support multi-cloud deployments.
 
 ---
 
