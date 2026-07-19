@@ -39,7 +39,7 @@ func (r *minioInstance) EnsureBucketExists(ctx context.Context) error {
 	return nil
 }
 
-func (r *minioInstance) GeneratePSUrl(ctx context.Context, objectKey string, expireIn int64) (*types.UploadUrlResponse, error) {
+func (r *minioInstance) GeneratePSUrl(ctx context.Context, resourceID string, objectKey string, expireIn int64) (*types.UploadUrlResponse, error) {
 	// Generate the Presigned PUT URL
 
 	uploadURL, err := r.Client.PresignedPutObject(ctx, r.bucketName, objectKey, time.Duration(expireIn)*time.Second)
@@ -47,8 +47,9 @@ func (r *minioInstance) GeneratePSUrl(ctx context.Context, objectKey string, exp
 		return nil, err
 	}
 	return &types.UploadUrlResponse{
-		UploadUrl: uploadURL.String(),
-		ObjectKey: objectKey,
-		ExpiresIn: expireIn,
+		UploadUrl:  uploadURL.String(),
+		ObjectKey:  objectKey,
+		ExpiresIn:  expireIn,
+		ResourceID: resourceID,
 	}, nil
 }

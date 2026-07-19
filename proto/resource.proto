@@ -19,4 +19,5 @@ message GeneratePSUrlResponse {
   string UploadUrl=1;
   string ObjectKey=2;
   int64 ExpiresIn=3;
+  string ResourceID=4;
 }

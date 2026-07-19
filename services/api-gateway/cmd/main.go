@@ -24,16 +24,24 @@ func main() {
 	mux := http.NewServeMux()
 
 	// resuable grpc client and connection
-	grpcClient, err := grpcclient.NewResourceServiceClient()
+	resourceGrpcClient, err := grpcclient.NewResourceServiceClient()
 	if err != nil {
 		log.Printf("Failed to create resource service Grpc client : %v", err)
 		return
 	}
 
-	defer grpcClient.Close()
+	defer resourceGrpcClient.Close()
+
+	jobGrpcClient, err := grpcclient.NewJobServiceClient()
+	if err != nil {
+		log.Printf("Failed to create job service Grpc client : %v", err)
+		return
+	}
+
+	defer jobGrpcClient.Close()
 
 	//passing the grpc client to http handler constructor
-	httpHandler := httphandler.NewHttpHandler(grpcClient)
+	httpHandler := httphandler.NewHttpHandler(resourceGrpcClient, jobGrpcClient)
 
 	mux.HandleFunc("POST /resource/upload-url", httpHandler.HandleUploadUrlRequest)
 	mux.HandleFunc("POST /jobs/create", httpHandler.HandleCreateJobRequest)

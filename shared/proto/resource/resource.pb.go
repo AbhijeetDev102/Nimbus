@@ -94,6 +94,7 @@ type GeneratePSUrlResponse struct {
 	UploadUrl     string                 `protobuf:"bytes,1,opt,name=UploadUrl,proto3" json:"UploadUrl,omitempty"`
 	ObjectKey     string                 `protobuf:"bytes,2,opt,name=ObjectKey,proto3" json:"ObjectKey,omitempty"`
 	ExpiresIn     int64                  `protobuf:"varint,3,opt,name=ExpiresIn,proto3" json:"ExpiresIn,omitempty"`
+	ResourceID    string                 `protobuf:"bytes,4,opt,name=ResourceID,proto3" json:"ResourceID,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -149,6 +150,13 @@ func (x *GeneratePSUrlResponse) GetExpiresIn() int64 {
 	return 0
 }
 
+func (x *GeneratePSUrlResponse) GetResourceID() string {
+	if x != nil {
+		return x.ResourceID
+	}
+	return ""
+}
+
 var File_resource_proto protoreflect.FileDescriptor
 
 const file_resource_proto_rawDesc = "" +
@@ -158,11 +166,14 @@ const file_resource_proto_rawDesc = "" +
 	"\bFileName\x18\x01 \x01(\tR\bFileName\x12 \n" +
 	"\vContentType\x18\x02 \x01(\tR\vContentType\x12\x1a\n" +
 	"\bFileSize\x18\x03 \x01(\x03R\bFileSize\x12\"\n" +
-	"\fResourceType\x18\x04 \x01(\tR\fResourceType\"q\n" +
+	"\fResourceType\x18\x04 \x01(\tR\fResourceType\"\x91\x01\n" +
 	"\x15GeneratePSUrlResponse\x12\x1c\n" +
 	"\tUploadUrl\x18\x01 \x01(\tR\tUploadUrl\x12\x1c\n" +
 	"\tObjectKey\x18\x02 \x01(\tR\tObjectKey\x12\x1c\n" +
-	"\tExpiresIn\x18\x03 \x01(\x03R\tExpiresIn2c\n" +
+	"\tExpiresIn\x18\x03 \x01(\x03R\tExpiresIn\x12\x1e\n" +
+	"\n" +
+	"ResourceID\x18\x04 \x01(\tR\n" +
+	"ResourceID2c\n" +
 	"\x0fResourceService\x12P\n" +
 	"\rGeneratePSUrl\x12\x1e.resource.GeneratePSUrlRequest\x1a\x1f.resource.GeneratePSUrlResponseB Z\x1eshared/proto/resource;resourceb\x06proto3"
 

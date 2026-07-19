@@ -1,0 +1,18 @@
+syntax="proto3";
+package job;
+option go_package = "shared/proto/job;job";
+service JobService {
+    rpc CreateJob (CreateJobRequest) returns (CreateJobResponse);
+}
+
+message CreateJobRequest{
+    string ResourceID=1;
+    string JobType=2;
+    bytes Parameters=3;
+}
+
+message CreateJobResponse{
+    string JobId = 1;
+    string Status = 2;
+}
+

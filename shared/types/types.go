@@ -7,7 +7,8 @@ type UploadUrlRequest struct {
 	ResourceType string `json:"resourceType"`
 }
 type UploadUrlResponse struct {
-	UploadUrl string `json:"uploadUrl"`
-	ObjectKey string `json:"objectKey"`
-	ExpiresIn int64  `json:"expiresIn"`
+	UploadUrl  string `json:"uploadUrl"`
+	ObjectKey  string `json:"objectKey"`
+	ExpiresIn  int64  `json:"expiresIn"`
+	ResourceID string `json:"resourceID"`
 }

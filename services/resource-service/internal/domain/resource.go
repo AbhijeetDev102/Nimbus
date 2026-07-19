@@ -52,7 +52,7 @@ type Resource struct {
 }
 
 type StorageProvider interface {
-	GeneratePSUrl(ctx context.Context, objectKey string, expireIn int64) (*types.UploadUrlResponse, error)
+	GeneratePSUrl(ctx context.Context, resourceID string, objectKey string, expireIn int64) (*types.UploadUrlResponse, error)
 }
 
 type ResourceRepository interface {

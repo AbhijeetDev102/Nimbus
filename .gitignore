@@ -1,3 +1,19 @@
+# Secrets and Environment Variables
 **/.env
 **/.env.*
 secret.yml
+
+# Go binaries and build outputs
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+bin/
+
+# OS / IDE Files
+.DS_Store
+.idea/
+.vscode/

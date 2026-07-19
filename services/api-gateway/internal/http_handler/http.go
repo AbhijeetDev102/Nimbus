@@ -6,17 +6,21 @@ import (
 	"net/http"
 
 	grpcclient "github.com/AbhijeetDev102/Nimbus/services/api-gateway/internal/grpc_client"
+	"github.com/AbhijeetDev102/Nimbus/services/api-gateway/pkg/types"
+	jobPb "github.com/AbhijeetDev102/Nimbus/shared/proto/job"
 	pb "github.com/AbhijeetDev102/Nimbus/shared/proto/resource"
-	"github.com/AbhijeetDev102/Nimbus/shared/types"
+	sharedTypes "github.com/AbhijeetDev102/Nimbus/shared/types"
 )
 
 type httpHandler struct {
-	grpcClient *grpcclient.ResourceServiceClient
+	resourceGrpcClient *grpcclient.ResourceServiceClient
+	jobGrpcClient      *grpcclient.JobServiceClient
 }
 
-func NewHttpHandler(client *grpcclient.ResourceServiceClient) *httpHandler {
+func NewHttpHandler(resourceGrpcClient *grpcclient.ResourceServiceClient, jobGrpcClient *grpcclient.JobServiceClient) *httpHandler {
 	return &httpHandler{
-		grpcClient: client,
+		resourceGrpcClient: resourceGrpcClient,
+		jobGrpcClient:      jobGrpcClient,
 	}
 }
 
@@ -29,7 +33,7 @@ func writeJSON(w http.ResponseWriter, status int, data any) error {
 }
 
 func (h *httpHandler) HandleUploadUrlRequest(w http.ResponseWriter, r *http.Request) {
-	var requestBody types.UploadUrlRequest
+	var requestBody sharedTypes.UploadUrlRequest
 
 	if err := json.NewDecoder(r.Body).Decode(&requestBody); err != nil {
 		http.Error(w, "failed to parse json data ", http.StatusBadRequest)
@@ -57,7 +61,7 @@ func (h *httpHandler) HandleUploadUrlRequest(w http.ResponseWriter, r *http.Requ
 	}
 
 	var response *pb.GeneratePSUrlResponse
-	response, err := h.grpcClient.Client.GeneratePSUrl(r.Context(), &pb.GeneratePSUrlRequest{
+	response, err := h.resourceGrpcClient.Client.GeneratePSUrl(r.Context(), &pb.GeneratePSUrlRequest{
 		FileName:     requestBody.FileName,
 		ContentType:  requestBody.ContentType,
 		FileSize:     requestBody.FileSize,
@@ -76,10 +80,11 @@ func (h *httpHandler) HandleUploadUrlRequest(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	if err := writeJSON(w, http.StatusCreated, types.UploadUrlResponse{
-		UploadUrl: response.GetUploadUrl(),
-		ObjectKey: response.GetObjectKey(),
-		ExpiresIn: response.GetExpiresIn(),
+	if err := writeJSON(w, http.StatusCreated, sharedTypes.UploadUrlResponse{
+		UploadUrl:  response.GetUploadUrl(),
+		ObjectKey:  response.GetObjectKey(),
+		ExpiresIn:  response.GetExpiresIn(),
+		ResourceID: response.GetResourceID(),
 	}); err != nil {
 		log.Printf("Failed to writeJson to response in PUrl : %v", err)
 	}
@@ -87,5 +92,44 @@ func (h *httpHandler) HandleUploadUrlRequest(w http.ResponseWriter, r *http.Requ
 }
 
 func (h *httpHandler) HandleCreateJobRequest(w http.ResponseWriter, r *http.Request) {
+	var reqBody *types.CreateJobRequest
+
+	if err := json.NewDecoder(r.Body).Decode(&reqBody); err != nil {
+		http.Error(w, "failed to parse json data ", http.StatusBadRequest)
+		return
+	}
+	defer r.Body.Close()
+
+	if reqBody.JobType == "" {
+		http.Error(w, "job type is not specified", http.StatusBadRequest)
+		return
+	}
+	if reqBody.ResourceID == "" {
+		http.Error(w, "resource id is not specified", http.StatusBadRequest)
+		return
+	}
+	if len(reqBody.Parameters) == 0 || !json.Valid(reqBody.Parameters) {
+		http.Error(w, "parameters must be a valid JSON object", http.StatusBadRequest)
+		return
+	}
+
+	response, err := h.jobGrpcClient.Client.CreateJob(r.Context(), &jobPb.CreateJobRequest{
+		ResourceID: reqBody.ResourceID,
+		JobType:    reqBody.JobType,
+		Parameters: reqBody.Parameters,
+	})
+
+	if err != nil {
+		log.Printf("failed to create job via gRPC: %v", err)
+		http.Error(w, "failed to create job", http.StatusInternalServerError)
+		return
+	}
+
+	if err := writeJSON(w, http.StatusCreated, types.CreateJobResponse{
+		JobId:  response.GetJobId(),
+		Status: response.GetStatus(),
+	}); err != nil {
+		log.Printf("Failed to write JSON response: %v", err)
+	}
 
 }

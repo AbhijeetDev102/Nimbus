@@ -57,8 +57,9 @@ func (h *grpcHandler) GeneratePSUrl(ctx context.Context, req *pb.GeneratePSUrlRe
 		return nil, status.Errorf(codes.Internal, "failed to generate presigned url : %v", err)
 	}
 	return &pb.GeneratePSUrlResponse{
-		UploadUrl: response.UploadUrl,
-		ObjectKey: response.ObjectKey,
-		ExpiresIn: response.ExpiresIn,
+		UploadUrl:  response.UploadUrl,
+		ObjectKey:  response.ObjectKey,
+		ExpiresIn:  response.ExpiresIn,
+		ResourceID: response.ResourceID,
 	}, nil
 }

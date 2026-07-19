@@ -46,7 +46,7 @@ func (s *Service) GeneratePSUrl(ctx context.Context, req *types.UploadUrlRequest
 		return nil, err
 	}
 
-	response, err := s.storage.GeneratePSUrl(ctx, objectKey, int64(600))
+	response, err := s.storage.GeneratePSUrl(ctx, randString, objectKey, int64(600))
 	if err != nil {
 		return nil, err
 	}
