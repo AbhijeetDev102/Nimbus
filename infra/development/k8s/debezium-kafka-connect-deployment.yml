@@ -18,10 +18,10 @@ spec:
           resources:
             requests:
               memory: "512Mi"
-              cpu: "125m"
+              cpu: "250m"
             limits:
-              memory: "512Mi"
-              cpu: "500m"
+              memory: "1536Mi"
+              cpu: "1000m"
           ports:
             - containerPort: 8083
           env:
@@ -35,8 +35,20 @@ spec:
               value: "my_connect_offsets"
             - name: STATUS_STORAGE_TOPIC
               value: "my_connect_statuses"
-            - name: JAVA_OPTS
-              value: "-Xmx256M -Xms256M"
+            - name: CONFIG_STORAGE_REPLICATION_FACTOR
+              value: "1"
+            - name: OFFSET_STORAGE_REPLICATION_FACTOR
+              value: "1"
+            - name: STATUS_STORAGE_REPLICATION_FACTOR
+              value: "1"
+            - name: KEY_CONVERTER
+              value: "org.apache.kafka.connect.json.JsonConverter"
+            - name: VALUE_CONVERTER
+              value: "org.apache.kafka.connect.json.JsonConverter"
+            - name: KAFKA_HEAP_OPTS
+              value: "-Xms256M -Xmx512M"
+            - name: CONNECT_PLUGIN_PATH
+              value: "/kafka/connect/debezium-connector-postgres"
 
 ---
 apiVersion: v1

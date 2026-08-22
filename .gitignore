@@ -1,7 +1,24 @@
 # Secrets and Environment Variables
+.env
+.env.*
+*.env
 **/.env
 **/.env.*
+**/*.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+!**/.env.example
+!**/.env.*.example
+
+# Kubernetes Secrets
 secret.yml
+secrets.yml
+**/secret.yml
+**/secrets.yml
+!**/secret.example.yml
+
 
 # Go binaries and build outputs
 *.exe

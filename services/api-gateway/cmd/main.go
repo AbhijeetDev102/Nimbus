@@ -11,16 +11,16 @@ import (
 
 	grpcclient "github.com/AbhijeetDev102/Nimbus/services/api-gateway/internal/grpc_client"
 	httphandler "github.com/AbhijeetDev102/Nimbus/services/api-gateway/internal/http_handler"
+	"github.com/joho/godotenv"
 
 	"github.com/AbhijeetDev102/Nimbus/services/api-gateway/internal/middleware"
 	"github.com/AbhijeetDev102/Nimbus/shared/env"
 )
 
-var (
-	httpAddr = env.GetString("GATEWAY_HTTP_ADDR", ":8081")
-)
-
 func main() {
+	godotenv.Load()
+
+	httpAddr := env.GetString("GATEWAY_HTTP_ADDR", ":8081")
 	mux := http.NewServeMux()
 
 	// resuable grpc client and connection
