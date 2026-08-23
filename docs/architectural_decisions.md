@@ -53,3 +53,18 @@ This document tracks all major architectural and design decisions made during th
 **Context:** Designing Nimbus purely as a video transcoder couples the execution engine to FFmpeg, preventing reuse.\
 **Decision:** Nimbus is officially defined as a generic **Cloud-Native Distributed Job Execution Platform**. Video Transcoding is simply the *first workload*.\
 **Consequences:** The codebase will have strict package separation between Platform logic (`scheduler/`, `worker/`, `queue/`) and Workload logic (`ffmpeg/`, `thumbnail/`). Workers execute generic `Job` interfaces, dynamically routing to workload-specific handlers.
+
+---
+
+## ADR 009: Outbox Event Router (SMT) and Header-Based Event Filtering
+**Date:** 2026-08-23\
+**Context:** Raw Change Data Capture (CDC) events from Debezium contain database-level WAL metadata (`before`, `after`, `source`, `op`, `ts_ms`), heavily coupling downstream workers to database table internals. Furthermore, workers often need to filter or route messages by event type without the CPU overhead of deserializing entire JSON payloads.\
+**Decision:** We use Debezium's `EventRouter` Single Message Transformation (SMT). It extracts the JSON `payload` column directly as the Kafka message value, sets the Kafka message key to `aggregate_id` (Job UUID) for strict per-job partition ordering, routes to `<aggregate_type>.events` (`job.events`), and places `event_type` directly into the Kafka message record headers (`eventType`).\
+**Consequences:** Workers receive clean, unpolluted domain payloads. Placing `eventType` in Kafka headers enables zero-deserialization event filtering. Partition ordering is guaranteed per job aggregate.
+
+## ADR 010: Idempotent Execution & Atomic Conditional Updates for Worker Deduplication
+**Date:** 2026-08-23\
+**Context:** At-least-once message delivery in Kafka and Debezium means duplicate events can reach workers. Separate `SELECT` then `UPDATE` operations create a Time-of-Check to Time-of-Use (TOCTOU) race condition where multiple workers might process the exact same job concurrently.\
+**Decision:** Workers claim jobs using atomic conditional updates in PostgreSQL (`UPDATE jobs SET status = 'RUNNING', worker_id = :workerId, started_at = NOW() WHERE id = :jobId AND status = 'QUEUED'`). The number of affected rows dictates job ownership: `RowsAffected == 1` grants the execution lease; `RowsAffected == 0` safely discards/acknowledges the duplicate event.\
+**Consequences:** Eliminates race conditions and duplicate workload execution natively at the database layer without needing complex external locking mechanisms.
+

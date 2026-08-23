@@ -11,3 +11,9 @@ k8s_yaml("./infra/development/k8s/debezium-kafka-connect-deployment.yml")
 
 k8s_resource("kafka", port_forwards='9092:9092')
 k8s_resource("connect", port_forwards='8083:8083')
+
+local_resource(
+    name="register-outbox-connector",
+    cmd="go run ./tools/registerConnector/register_connector.go",
+    resource_deps=["connect"],
+)

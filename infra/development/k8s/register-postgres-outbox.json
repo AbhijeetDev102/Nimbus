@@ -1,0 +1,22 @@
+{
+    "name": "nimbus-postgres-outbox-connector",
+    "config": {
+        "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+        "tasks.max": "1",
+        "plugin.name": "pgoutput",
+        "database.hostname": "postgres",
+        "database.port": "5432",
+        "database.user": "postgres",
+        "database.password": "postgrespassword",
+        "database.dbname": "nimbus",
+        "topic.prefix": "cdc",
+        "table.include.list": "public.outbox_events",
+        "transforms": "outbox",
+        "transforms.outbox.type": "io.debezium.transforms.outbox.EventRouter",
+        "transforms.outbox.table.fields.additional.placement": "event_type:header:eventType",
+        "transforms.outbox.table.field.event.aggregate.id": "aggregate_id",
+        "transforms.outbox.table.field.event.aggregate.type": "aggregate_type",
+        "transforms.outbox.table.field.event.payload": "payload",
+        "transforms.outbox.route.topic.replacement": "${routedByValue}.events"
+    }
+}
