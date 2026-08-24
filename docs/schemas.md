@@ -102,6 +102,7 @@ type Job struct {
     WorkerID         *uuid.UUID     `gorm:"type:uuid"`
     Parameters       datatypes.JSON `gorm:"type:jsonb"`
     OutputResourceID *uuid.UUID     `gorm:"type:uuid"`
+    ErrorMessage     *string        `gorm:"type:text"`
     CreatedAt        time.Time
     StartedAt        *time.Time
     CompletedAt      *time.Time
@@ -122,6 +123,7 @@ type Job struct {
 | `WorkerID` | `*uuid.UUID` | Nullable | UUID of the active worker executing the job. Set when a worker acquires the job lease. `nil` when queued. |
 | `Parameters` | `datatypes.JSON` | Nullable (`JSONB`) | Free-form, workload-specific dynamic JSON configuration (e.g. `{"resolution": "1080p", "codec": "h264", "bitrate": "4000k"}`). Gives infinite flexibility to future workloads without altering the DB schema. |
 | `OutputResourceID`| `*uuid.UUID` | Nullable | UUID referencing the newly generated output `Resource` record once processing succeeds. `nil` until completion. |
+| `ErrorMessage` | `*string` | Nullable (`TEXT`) | Stores the failure reason or error message if execution fails. Enables client/API error visibility. |
 | `CreatedAt` | `time.Time` | Non-null | Timestamp when the job was queued. |
 | `StartedAt` | `*time.Time` | Nullable | Timestamp when a worker picked up the job and set it to `RUNNING`. |
 | `CompletedAt` | `*time.Time` | Nullable | Timestamp when execution finalized (succeeded, failed, or was cancelled). |

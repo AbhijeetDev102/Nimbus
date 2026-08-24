@@ -17,6 +17,7 @@ type Job struct {
 	MaxRetries       int
 	WorkerID         *uuid.UUID
 	Parameters       datatypes.JSON `gorm:"type:jsonb"` // Stores dynamic instructions (like what resolution to transcode to)
+	ErrorMesssage    *string
 	OutputResourceID *uuid.UUID
 	CreatedAt        time.Time
 	StartedAt        *time.Time
