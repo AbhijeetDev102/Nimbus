@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 
 	"github.com/AbhijeetDev102/Nimbus/services/job-service/internal/domain"
+	"github.com/AbhijeetDev102/Nimbus/shared/types"
 	"github.com/google/uuid"
 	"gorm.io/datatypes"
 )
@@ -28,7 +29,7 @@ func (s *jobService) CreateJob(ctx context.Context, req *domain.CreateJobRequest
 		ID:         jobId,
 		ResourceID: req.ResourceID,
 		JobType:    req.JobType,
-		Status:     domain.JobQueued,
+		Status:     types.JobQueued,
 		RetryCount: 0,
 		MaxRetries: 3,
 		Parameters: req.Parameters,
@@ -39,7 +40,7 @@ func (s *jobService) CreateJob(ctx context.Context, req *domain.CreateJobRequest
 		ID:            eventId,
 		AggregateType: "Job",
 		AggregateID:   jobId,
-		EventType:     domain.EventJobCreated,
+		EventType:     types.EventJobCreated,
 		Payload:       datatypes.JSON(jobJSON),
 	}
 

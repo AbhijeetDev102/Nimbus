@@ -12,3 +12,37 @@ type UploadUrlResponse struct {
 	ExpiresIn  int64  `json:"expiresIn"`
 	ResourceID string `json:"resourceID"`
 }
+
+type JobType string
+
+const (
+	VideoTranscode JobType = "VIDEO_TRANSCODE"
+	ImageResize    JobType = "IMAGE_RESIZE"
+)
+
+type JobStatus string
+
+const (
+	JobQueued    JobStatus = "QUEUED"
+	JobRunning   JobStatus = "RUNNING"
+	JobCompleted JobStatus = "COMPLETED"
+	JobFailed    JobStatus = "FAILED"
+	JobCancelled JobStatus = "CANCELLED"
+	JobRetrying  JobStatus = "RETRYING"
+)
+
+type EventType string
+
+const (
+	EventJobCreated   EventType = "JobCreated"
+	EventJobCompleted EventType = "JobCompleted"
+	EventJobFailed    EventType = "JobFailed"
+)
+
+type ResourceType string
+
+const (
+	ResourceVideo    ResourceType = "VIDEO"
+	ResourceImage    ResourceType = "IMAGE"
+	ResourceDocument ResourceType = "DOCUMENT"
+)

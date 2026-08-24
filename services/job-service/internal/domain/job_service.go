@@ -3,13 +3,14 @@ package domain
 import (
 	"context"
 
+	"github.com/AbhijeetDev102/Nimbus/shared/types"
 	"github.com/google/uuid"
 	"gorm.io/datatypes"
 )
 
 type CreateJobRequest struct {
 	ResourceID uuid.UUID
-	JobType    JobType
+	JobType    types.JobType
 	Parameters datatypes.JSON
 }
 

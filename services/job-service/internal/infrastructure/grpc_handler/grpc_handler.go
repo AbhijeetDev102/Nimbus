@@ -6,6 +6,7 @@ import (
 
 	"github.com/AbhijeetDev102/Nimbus/services/job-service/internal/domain"
 	pb "github.com/AbhijeetDev102/Nimbus/shared/proto/job"
+	"github.com/AbhijeetDev102/Nimbus/shared/types"
 	"github.com/google/uuid"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -50,7 +51,7 @@ func (h *grpcHandler) CreateJob(ctx context.Context, req *pb.CreateJobRequest) (
 	}
 	job, err := h.service.CreateJob(ctx, &domain.CreateJobRequest{
 		ResourceID: parserID,
-		JobType:    domain.JobType(jobType),
+		JobType:    types.JobType(jobType),
 		Parameters: datatypes.JSON(parameters),
 	})
 

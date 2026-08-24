@@ -3,8 +3,9 @@ package domain
 import (
 	"time"
 
-	"github.com/AbhijeetDev102/Nimbus/shared/types"
 	"github.com/google/uuid"
+
+	"github.com/AbhijeetDev102/Nimbus/shared/types"
 	"gorm.io/datatypes"
 )
 
@@ -22,13 +23,4 @@ type Job struct {
 	StartedAt        *time.Time
 	CompletedAt      *time.Time
 	UpdatedAt        time.Time
-}
-
-type OutboxEvent struct {
-	ID            uuid.UUID       `gorm:"type:uuid;primaryKey"`
-	AggregateType string          `gorm:"type:varchar(50);not null"` // What entity is this? (e.g., "Job")
-	AggregateID   uuid.UUID       `gorm:"type:uuid;not null"`        // The UUID of the specific Job
-	EventType     types.EventType // What happened? (e.g., "JobCreated")
-	Payload       datatypes.JSON  `gorm:"type:jsonb;not null"` // The JSON data the Worker needs
-	CreatedAt     time.Time
 }
