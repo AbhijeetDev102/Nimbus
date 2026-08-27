@@ -1,4 +1,4 @@
-package Dispatcher
+package dispatcher
 
 import (
 	"context"

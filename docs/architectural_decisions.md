@@ -68,3 +68,15 @@ This document tracks all major architectural and design decisions made during th
 **Decision:** Workers claim jobs using atomic conditional updates in PostgreSQL (`UPDATE jobs SET status = 'RUNNING', worker_id = :workerId, started_at = NOW() WHERE id = :jobId AND status = 'QUEUED'`). The number of affected rows dictates job ownership: `RowsAffected == 1` grants the execution lease; `RowsAffected == 0` safely discards/acknowledges the duplicate event.\
 **Consequences:** Eliminates race conditions and duplicate workload execution natively at the database layer without needing complex external locking mechanisms.
 
+---
+
+## ADR 011: Pure Go Kafka Client (`twmb/franz-go`) over CGO Bindings
+**Date:** 2026-08-27\
+**Context:** `confluent-kafka-go` relies on CGO and native `librdkafka` C bindings. This introduces significant operational friction: Windows developer environments require GCC/MinGW, local `gopls` linting fails under `CGO_ENABLED=0`, container builds require C build tools and C runtime libraries, and panics inside C memory lack native Go goroutine stack traces.\
+**Decision:** We adopted `github.com/twmb/franz-go` as the standardized Kafka client across Nimbus Go services.\
+**Consequences:** 
+1. **Zero CGO & Ultimate Portability:** Compiles seamlessly on Windows, macOS, Linux, and minimal Alpine/Scratch Docker containers with zero GCC dependencies.
+2. **Enhanced Debuggability & Visibility:** Native Go runtime goroutines, structured logging hooks (`kgo.WithLogger`), and explicit rebalance callbacks.
+3. **High Performance & Cooperative Sticky Rebalancing:** Supports zero-allocation batch record iteration and native cooperative rebalances without stop-the-world partitions churn during worker scaling.
+
+
