@@ -65,3 +65,47 @@ func (f *FFmpegService) Probe(ctx context.Context, inputPath string) (*VideoMeta
 	}
 	return nil, fmt.Errorf("no video stream found in %s", inputPath)
 }
+
+func (f *FFmpegService) Transcode(ctx context.Context, inputPath string, outputPath string, parameters VideoParameters) error {
+	// 1. Determine the scaling filter based on requested resolution
+	scaleFilter := "scale=-2:720" // default fallback
+	switch parameters.Resolution {
+	case "1080p":
+		scaleFilter = "scale=-2:1080"
+	case "720p":
+		scaleFilter = "scale=-2:720"
+	case "480p":
+		scaleFilter = "scale=-2:480"
+	case "360p":
+		scaleFilter = "scale=-2:360"
+	}
+
+	// 2. Build the argument list
+	args := []string{
+		"-y",
+		"-i", inputPath,
+		"-vf", scaleFilter,
+		"-c:v", "libx264",
+		"-preset", "fast",
+		"-c:a", "aac",
+	}
+
+	// If a custom bitrate was specified (e.g. "4000k"), apply it
+	if parameters.Bitrate != "" {
+		args = append(args, "-b:v", parameters.Bitrate)
+	}
+
+	// Append output destination path
+	args = append(args, outputPath)
+
+	// 3. Execute with context (so cancellation immediately terminates FFmpeg)
+	cmd := exec.CommandContext(ctx, "ffmpeg", args...)
+
+	// CombinedOutput captures both stdout & stderr (FFmpeg outputs all logs to stderr)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("ffmpeg transcoding failed: %w (output: %s)", err, string(output))
+	}
+
+	return nil
+}
