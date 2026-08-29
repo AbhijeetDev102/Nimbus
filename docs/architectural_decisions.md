@@ -92,3 +92,12 @@ This document tracks all major architectural and design decisions made during th
 1. `resource-service` distinguishes between `MINIO_ENDPOINT` (internal cluster communication) and `MINIO_PUBLIC_ENDPOINT` (presigned client URL signing).
 2. The `VideoHandler` pipeline executes `ffprobe` on the transcoded `localOutputPath` *after* FFmpeg completes, capturing the verified output dimensions, bitrate, and duration before uploading to storage.\
 **Consequences:** External clients upload seamlessly without internal DNS collisions, and PostgreSQL metadata records the ground truth of the processed media.
+
+## ADR 014: Ephemeral Real-Time Progress Streaming via Redis Pub/Sub & WebSockets
+**Date:** 2026-08-30\
+**Context:** Video transcoding produces high-frequency progress updates (multiple ticks per second). Persisting progress to PostgreSQL creates severe Write-Ahead Log (WAL) write amplification, table bloat, and connection pool exhaustion when thousands of clients poll `GET /jobs/{id}`.\
+**Decision:** We treat progress updates as ephemeral (transient) data. `FFmpegService` pipes real-time statistics via `-progress pipe:1`, the worker throttles updates to at most once per 250ms, publishes JSON frames to Redis Pub/Sub (`job:progress:<job_id>`), and the API Gateway streams them directly to connected frontend clients via a dedicated WebSocket endpoint (`/ws/jobs/{id}`).\
+**Consequences:** 
+1. **Zero Database Overhead:** PostgreSQL IOPS and WAL are completely isolated from high-frequency progress traffic.
+2. **Sub-Millisecond UI Latency:** Smooth real-time progress bar streaming directly to browser clients.
+3. **Decoupled Architecture:** Workers and API Gateways communicate asynchronously via Redis channels with zero direct coupling.

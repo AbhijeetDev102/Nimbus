@@ -12,6 +12,7 @@ import (
 	grpcclient "github.com/AbhijeetDev102/Nimbus/services/api-gateway/internal/grpc_client"
 	httphandler "github.com/AbhijeetDev102/Nimbus/services/api-gateway/internal/http_handler"
 	"github.com/joho/godotenv"
+	"github.com/redis/go-redis/v9"
 
 	"github.com/AbhijeetDev102/Nimbus/services/api-gateway/internal/middleware"
 	"github.com/AbhijeetDev102/Nimbus/shared/env"
@@ -40,12 +41,20 @@ func main() {
 
 	defer jobGrpcClient.Close()
 
+	// Redis Client for WebSocket Pub/Sub
+	redisAddr := env.GetString("REDIS_ADDR", "localhost:6379")
+	redisClient := redis.NewClient(&redis.Options{
+		Addr: redisAddr,
+	})
+	defer redisClient.Close()
+
 	//passing the grpc client to http handler constructor
-	httpHandler := httphandler.NewHttpHandler(resourceGrpcClient, jobGrpcClient)
+	httpHandler := httphandler.NewHttpHandler(resourceGrpcClient, jobGrpcClient, redisClient)
 
 	mux.HandleFunc("POST /resource/upload-url", httpHandler.HandleUploadUrlRequest)
 	mux.HandleFunc("POST /jobs/create", httpHandler.HandleCreateJobRequest)
 	mux.HandleFunc("GET /jobs/{id}", httpHandler.HandleGetJob)
+	mux.HandleFunc("GET /ws/jobs/{id}", httpHandler.HandleJobProgressWS) // <-- Real-time WebSocket!
 
 	server := &http.Server{
 		Addr:    httpAddr,
