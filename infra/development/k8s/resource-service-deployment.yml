@@ -1,0 +1,77 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: resource-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: resource-service
+  template:
+    metadata:
+      labels:
+        app: resource-service
+    spec:
+      containers:
+        - name: resource-service
+          image: nimbus-resource-service
+          ports:
+            - containerPort: 9093
+          env:
+            - name: POSTGRES_HOSTNAME
+              valueFrom:
+                configMapKeyRef:
+                  name: nimbus-config
+                  key: POSTGRES_HOSTNAME
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-auth
+                  key: root-user
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-auth
+                  key: root-password
+            - name: POSTGRES_DB_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-auth
+                  key: db-name
+            - name: MINIO_ENDPOINT
+              valueFrom:
+                configMapKeyRef:
+                  name: nimbus-config
+                  key: MINIO_ENDPOINT
+            - name: MINIO_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: minio-auth
+                  key: root-user
+            - name: MINIO_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: minio-auth
+                  key: root-password
+            - name: MINIO_BUCKET_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: nimbus-config
+                  key: MINIO_BUCKET_NAME
+            - name: MINIO_USE_SSL
+              valueFrom:
+                configMapKeyRef:
+                  name: nimbus-config
+                  key: MINIO_USE_SSL
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: resource-service
+spec:
+  selector:
+    app: resource-service
+  ports:
+    - port: 9093
+      targetPort: 9093

@@ -9,20 +9,20 @@ import (
 )
 
 type Job struct {
-	ID               uuid.UUID `gorm:"type:uuid;primaryKey"`
-	ResourceID       uuid.UUID `gorm:"type:uuid;index;not null"` // Connects back to the Resource Service!
-	JobType          types.JobType
-	Status           types.JobStatus
-	RetryCount       int
-	MaxRetries       int
-	WorkerID         *uuid.UUID
-	Parameters       datatypes.JSON `gorm:"type:jsonb"` // Stores dynamic instructions (like what resolution to transcode to)
-	ErrorMesssage    *string
-	OutputResourceID *uuid.UUID
-	CreatedAt        time.Time
-	StartedAt        *time.Time
-	CompletedAt      *time.Time
-	UpdatedAt        time.Time
+	ID               uuid.UUID       `json:"id" gorm:"type:uuid;primaryKey"`
+	ResourceID       uuid.UUID       `json:"resource_id" gorm:"type:uuid;index;not null"`
+	JobType          types.JobType   `json:"job_type"`
+	Status           types.JobStatus `json:"status"`
+	RetryCount       int             `json:"retry_count"`
+	MaxRetries       int             `json:"max_retries"`
+	WorkerID         *uuid.UUID      `json:"worker_id"`
+	Parameters       datatypes.JSON  `json:"parameters" gorm:"type:jsonb"`
+	ErrorMessage     *string         `json:"error_message"`
+	OutputResourceID *uuid.UUID      `json:"output_resource_id"`
+	CreatedAt        time.Time       `json:"created_at"`
+	StartedAt        *time.Time      `json:"started_at"`
+	CompletedAt      *time.Time      `json:"completed_at"`
+	UpdatedAt        time.Time       `json:"updated_at"`
 }
 
 type OutboxEvent struct {

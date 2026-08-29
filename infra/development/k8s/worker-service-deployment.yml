@@ -1,0 +1,78 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worker-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: worker-service
+  template:
+    metadata:
+      labels:
+        app: worker-service
+    spec:
+      containers:
+        - name: worker-service
+          image: nimbus-worker-service
+          env:
+            - name: POSTGRES_HOSTNAME
+              valueFrom:
+                configMapKeyRef:
+                  name: nimbus-config
+                  key: POSTGRES_HOSTNAME
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-auth
+                  key: root-user
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-auth
+                  key: root-password
+            - name: POSTGRES_DB_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-auth
+                  key: db-name
+            - name: MINIO_ENDPOINT
+              valueFrom:
+                configMapKeyRef:
+                  name: nimbus-config
+                  key: MINIO_ENDPOINT
+            - name: MINIO_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: minio-auth
+                  key: root-user
+            - name: MINIO_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: minio-auth
+                  key: root-password
+            - name: MINIO_BUCKET_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: nimbus-config
+                  key: MINIO_BUCKET_NAME
+            - name: MINIO_USE_SSL
+              valueFrom:
+                configMapKeyRef:
+                  name: nimbus-config
+                  key: MINIO_USE_SSL
+            - name: KAFKA_BROKERS
+              valueFrom:
+                configMapKeyRef:
+                  name: nimbus-config
+                  key: KAFKA_BROKERS
+            - name: KAFKA_CONSUMER_GROUP
+              valueFrom:
+                configMapKeyRef:
+                  name: nimbus-config
+                  key: KAFKA_CONSUMER_GROUP
+            - name: KAFKA_JOB_TOPIC
+              valueFrom:
+                configMapKeyRef:
+                  name: nimbus-config
+                  key: KAFKA_JOB_TOPIC

@@ -93,8 +93,19 @@ func (c *JobConsumer) processRecord(ctx context.Context, record *kgo.Record) {
 
 	var job domain.Job
 
-	if err := json.Unmarshal(record.Value, &job); err != nil {
-		log.Printf("Failed to unmarshal job payload: %v", err)
+	// 1. Try unmarshaling directly (raw JSON)
+	if err := json.Unmarshal(record.Value, &job); err != nil || job.ID == uuid.Nil {
+		// 2. Fallback: check if wrapped in Kafka Connect Schema envelope
+		var envelope struct {
+			Payload string `json:"payload"`
+		}
+		if err := json.Unmarshal(record.Value, &envelope); err == nil && envelope.Payload != "" {
+			_ = json.Unmarshal([]byte(envelope.Payload), &job)
+		}
+	}
+
+	if job.ID == uuid.Nil {
+		log.Printf("Failed to unmarshal valid job payload from Kafka message")
 		c.client.CommitRecords(ctx, record)
 		return
 	}

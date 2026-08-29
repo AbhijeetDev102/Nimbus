@@ -24,6 +24,13 @@ spec:
               cpu: "1000m"
           ports:
             - containerPort: 8083
+          readinessProbe:
+            httpGet:
+              path: /connectors
+              port: 8083
+            initialDelaySeconds: 15
+            periodSeconds: 5
+            timeoutSeconds: 5
           env:
             - name: BOOTSTRAP_SERVERS
               value: "kafka:9092"
@@ -48,7 +55,12 @@ spec:
             - name: KAFKA_HEAP_OPTS
               value: "-Xms256M -Xmx512M"
             - name: CONNECT_PLUGIN_PATH
-              value: "/kafka/connect/debezium-connector-postgres"
+              value: "/kafka/connect"
+            - name: VALUE_CONVERTER_SCHEMAS_ENABLE
+              value: "false"
+            - name: KEY_CONVERTER_SCHEMAS_ENABLE
+              value: "false"
+
 
 ---
 apiVersion: v1

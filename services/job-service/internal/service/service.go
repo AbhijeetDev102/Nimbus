@@ -38,7 +38,7 @@ func (s *jobService) CreateJob(ctx context.Context, req *domain.CreateJobRequest
 	jobJSON, _ := json.Marshal(job)
 	outBoxEvent := &domain.OutboxEvent{
 		ID:            eventId,
-		AggregateType: "Job",
+		AggregateType: "job",
 		AggregateID:   jobId,
 		EventType:     types.EventJobCreated,
 		Payload:       datatypes.JSON(jobJSON),

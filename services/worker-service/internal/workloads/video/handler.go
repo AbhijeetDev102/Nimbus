@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 
@@ -44,15 +45,18 @@ func (h *VideoHandler) Execute(ctx context.Context, job *domain.Job) (*domain.Ex
 	localOutputPath := filepath.Join(tempDir, "output.mp4")
 
 	inputKey := fmt.Sprintf("resource/original/%s.mp4", job.ResourceID.String())
+	log.Printf("[Job %s] Downloading source video: %s", job.ID, inputKey)
 	if err := h.storage.Download(ctx, inputKey, localInputPath); err != nil {
 		return nil, fmt.Errorf("failed to download source video: %w", err)
 	}
 
+	log.Printf("[Job %s] Probing source video metadata...", job.ID)
 	metadata, err := h.ffmpeg.Probe(ctx, localInputPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to probe video metadata: %w", err)
 	}
 
+	log.Printf("[Job %s] Transcoding video to %s (%s)...", job.ID, videoParams.Resolution, videoParams.Codec)
 	if err := h.ffmpeg.Transcode(ctx, localInputPath, localOutputPath, videoParams); err != nil {
 		return nil, fmt.Errorf("transcoding failed: %w", err)
 	}
@@ -60,10 +64,12 @@ func (h *VideoHandler) Execute(ctx context.Context, job *domain.Job) (*domain.Ex
 	outputResourceID := uuid.New()
 	outputKey := fmt.Sprintf("resource/processed/%s.mp4", outputResourceID.String())
 
+	log.Printf("[Job %s] Uploading processed video to MinIO: %s", job.ID, outputKey)
 	if err := h.storage.Upload(ctx, outputKey, localOutputPath, "video/mp4"); err != nil {
 		return nil, fmt.Errorf("failed to upload transcoded video: %w", err)
 	}
 
+	log.Printf("[Job %s] Video pipeline completed successfully!", job.ID)
 	metadataJSON, _ := json.Marshal(metadata)
 
 	return &domain.ExecutionResult{

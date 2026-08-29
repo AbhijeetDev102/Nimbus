@@ -79,4 +79,16 @@ This document tracks all major architectural and design decisions made during th
 2. **Enhanced Debuggability & Visibility:** Native Go runtime goroutines, structured logging hooks (`kgo.WithLogger`), and explicit rebalance callbacks.
 3. **High Performance & Cooperative Sticky Rebalancing:** Supports zero-allocation batch record iteration and native cooperative rebalances without stop-the-world partitions churn during worker scaling.
 
+## ADR 012: Defensive Outbox Payload Deserialization & Kafka StringConverter
+**Date:** 2026-08-29\
+**Context:** When using Kafka Connect with Debezium Outbox EventRouter SMT, default `JsonConverter` wraps outgoing records in an outer schema envelope (`{"schema": ..., "payload": "..."}`). If consumers expect raw JSON domain objects directly, deserialization fails or drops fields (e.g. empty UUIDs).\
+**Decision:** We configured `"value.converter": "org.apache.kafka.connect.storage.StringConverter"` in the connector configuration so PostgreSQL JSON outbox payloads are emitted directly into Kafka as clean JSON strings. Simultaneously, we implemented defensive dual-format unmarshaling in `JobConsumer` (attempting raw JSON first, then falling back to unpack schema envelopes if present).\
+**Consequences:** Workers are 100% resilient to message format discrepancies across environments and converter configurations while eliminating redundant schema metadata overhead in high-throughput event topics.
 
+## ADR 013: Dual Storage Endpoint Resolution & Post-Transcode Output Verification
+**Date:** 2026-08-29\
+**Context:** In Kubernetes and cloud deployments, backend services communicate via internal private DNS (`minio:9000`), whereas external clients (browsers, mobile apps) communicate via public domains (`localhost:9000` / `https://storage.nimbus.io`). S3 Presigned URLs cryptographically sign the `Host` header, causing client uploads to fail if internal endpoints are baked into presigned links. Furthermore, recording metadata by probing the input file reports the source dimensions rather than the true transcoded output properties.\
+**Decision:** 
+1. `resource-service` distinguishes between `MINIO_ENDPOINT` (internal cluster communication) and `MINIO_PUBLIC_ENDPOINT` (presigned client URL signing).
+2. The `VideoHandler` pipeline executes `ffprobe` on the transcoded `localOutputPath` *after* FFmpeg completes, capturing the verified output dimensions, bitrate, and duration before uploading to storage.\
+**Consequences:** External clients upload seamlessly without internal DNS collisions, and PostgreSQL metadata records the ground truth of the processed media.

@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-gateway
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: api-gateway
+  template:
+    metadata:
+      labels:
+        app: api-gateway
+    spec:
+      containers:
+        - name: api-gateway
+          image: nimbus-api-gateway
+          ports:
+            - containerPort: 8081
+          env:
+            - name: GATEWAY_HTTP_ADDR
+              valueFrom:
+                configMapKeyRef:
+                  name: nimbus-config
+                  key: GATEWAY_HTTP_ADDR
+            - name: RESOURCE_SERVICE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: nimbus-config
+                  key: RESOURCE_SERVICE_URL
+            - name: JOB_SERVICE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: nimbus-config
+                  key: JOB_SERVICE_URL
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-gateway
+spec:
+  selector:
+    app: api-gateway
+  ports:
+    - port: 8081
+      targetPort: 8081

@@ -14,9 +14,10 @@
         "transforms": "outbox",
         "transforms.outbox.type": "io.debezium.transforms.outbox.EventRouter",
         "transforms.outbox.table.fields.additional.placement": "event_type:header:eventType",
-        "transforms.outbox.table.field.event.aggregate.id": "aggregate_id",
-        "transforms.outbox.table.field.event.aggregate.type": "aggregate_type",
+        "transforms.outbox.table.field.event.key": "aggregate_id",
+        "transforms.outbox.route.by.field": "aggregate_type",
         "transforms.outbox.table.field.event.payload": "payload",
-        "transforms.outbox.route.topic.replacement": "${routedByValue}.events"
+        "transforms.outbox.route.topic.replacement": "${routedByValue}.events",
+        "value.converter": "org.apache.kafka.connect.storage.StringConverter"
     }
 }

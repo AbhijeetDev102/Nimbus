@@ -21,11 +21,11 @@ spec:
             - containerPort: 9001 #console
           resources:
             requests:
-              memory: "128Mi"
-              cpu: "125m"
+              memory: "256Mi"
+              cpu: "250m"
             limits:
-              memory: "128Mi"
-              cpu: "125m"
+              memory: "512Mi"
+              cpu: "500m"
           env:
             - name: MINIO_ROOT_USER
               valueFrom:
