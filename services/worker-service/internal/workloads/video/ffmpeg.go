@@ -1,11 +1,13 @@
 package video
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
 	"os/exec"
 	"strconv"
+	"strings"
 )
 
 type FFmpegService struct {
@@ -66,7 +68,9 @@ func (f *FFmpegService) Probe(ctx context.Context, inputPath string) (*VideoMeta
 	return nil, fmt.Errorf("no video stream found in %s", inputPath)
 }
 
-func (f *FFmpegService) Transcode(ctx context.Context, inputPath string, outputPath string, parameters VideoParameters) error {
+type ProgressCallback func(percent float64, speed string, fps float64)
+
+func (f *FFmpegService) Transcode(ctx context.Context, inputPath string, outputPath string, parameters VideoParameters, totalDuration float64, onProgress ProgressCallback) error {
 	// 1. Determine the scaling filter based on requested resolution
 	scaleFilter := "scale=-2:720" // default fallback
 	switch parameters.Resolution {
@@ -83,6 +87,8 @@ func (f *FFmpegService) Transcode(ctx context.Context, inputPath string, outputP
 	// 2. Build the argument list
 	args := []string{
 		"-y",
+		"-progress", "pipe:1", // <-- Instructs FFmpeg to stream statistics to stdout
+		"-nostats", // <-- Suppresses noisy console animation
 		"-i", inputPath,
 		"-vf", scaleFilter,
 		"-c:v", "libx264",
@@ -100,12 +106,53 @@ func (f *FFmpegService) Transcode(ctx context.Context, inputPath string, outputP
 
 	// 3. Execute with context (so cancellation immediately terminates FFmpeg)
 	cmd := exec.CommandContext(ctx, "ffmpeg", args...)
-
-	// CombinedOutput captures both stdout & stderr (FFmpeg outputs all logs to stderr)
-	output, err := cmd.CombinedOutput()
+	stdoutPipe, err := cmd.StdoutPipe()
 	if err != nil {
-		return fmt.Errorf("ffmpeg transcoding failed: %w (output: %s)", err, string(output))
+		return fmt.Errorf("failed to get ffmpeg stdout pipe: %w", err)
 	}
-
+	// Start FFmpeg process asynchronously
+	if err := cmd.Start(); err != nil {
+		return fmt.Errorf("failed to start ffmpeg: %w", err)
+	}
+	// 4. Read FFmpeg progress stream line-by-line in real time
+	scanner := bufio.NewScanner(stdoutPipe)
+	var outTimeUs int64
+	var speed string
+	var fps float64
+	for scanner.Scan() {
+		line := scanner.Text()
+		parts := strings.SplitN(line, "=", 2)
+		if len(parts) == 2 {
+			key := strings.TrimSpace(parts[0])
+			val := strings.TrimSpace(parts[1])
+			switch key {
+			case "out_time_us":
+				outTimeUs, _ = strconv.ParseInt(val, 10, 64)
+			case "speed":
+				speed = val
+			case "fps":
+				fps, _ = strconv.ParseFloat(val, 64)
+			case "progress":
+				if totalDuration > 0 && outTimeUs > 0 {
+					outSeconds := float64(outTimeUs) / 1000000.0
+					percent := (outSeconds / totalDuration) * 100.0
+					if percent > 99.0 {
+						percent = 99.0 // Cap at 99% until process finishes cleanly
+					}
+					if onProgress != nil {
+						onProgress(percent, speed, fps)
+					}
+				}
+			}
+		}
+	}
+	// Wait for FFmpeg process to finish
+	if err := cmd.Wait(); err != nil {
+		return fmt.Errorf("ffmpeg transcoding failed: %w", err)
+	}
+	// Emit final 100% completion
+	if onProgress != nil {
+		onProgress(100.0, speed, fps)
+	}
 	return nil
 }

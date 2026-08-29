@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/AbhijeetDev102/Nimbus/services/worker-service/internal/domain"
 	"github.com/google/uuid"
@@ -15,14 +16,16 @@ import (
 )
 
 type VideoHandler struct {
-	storage *MinioInstance
-	ffmpeg  *FFmpegService
+	storage   *MinioInstance
+	ffmpeg    *FFmpegService
+	publisher domain.ProgressPublisher // 👈 Generic publisher interface
 }
 
-func NewVideoHandler(storage *MinioInstance, ffmpeg *FFmpegService) *VideoHandler {
+func NewVideoHandler(storage *MinioInstance, ffmpeg *FFmpegService, publisher domain.ProgressPublisher) *VideoHandler {
 	return &VideoHandler{
-		storage: storage,
-		ffmpeg:  ffmpeg,
+		storage:   storage,
+		ffmpeg:    ffmpeg,
+		publisher: publisher,
 	}
 }
 func (h *VideoHandler) Execute(ctx context.Context, job *domain.Job) (*domain.ExecutionResult, error) {
@@ -51,14 +54,38 @@ func (h *VideoHandler) Execute(ctx context.Context, job *domain.Job) (*domain.Ex
 	}
 
 	log.Printf("[Job %s] Probing source video metadata...", job.ID)
+
 	metadata, err := h.ffmpeg.Probe(ctx, localInputPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to probe video metadata: %w", err)
 	}
 
+	// Throttle Redis progress events to at most once every 250ms
+	var lastPublished time.Time
+	onProgress := func(percent float64, speed string, fps float64) {
+		if time.Since(lastPublished) >= 250*time.Millisecond || percent >= 100.0 {
+			lastPublished = time.Now()
+			if h.publisher != nil {
+				_ = h.publisher.Publish(ctx, &domain.ProgressUpdate{
+					JobID:    job.ID.String(),
+					Progress: percent,
+					Speed:    speed,
+					FPS:      fps,
+					Status:   "RUNNING",
+				})
+			}
+		}
+	}
+
 	log.Printf("[Job %s] Transcoding video to %s (%s)...", job.ID, videoParams.Resolution, videoParams.Codec)
-	if err := h.ffmpeg.Transcode(ctx, localInputPath, localOutputPath, videoParams); err != nil {
+	if err := h.ffmpeg.Transcode(ctx, localInputPath, localOutputPath, videoParams, metadata.DurationSeconds, onProgress); err != nil {
 		return nil, fmt.Errorf("transcoding failed: %w", err)
+	}
+
+	// Probe the newly created output video for true output metadata
+	outputMetadata, err := h.ffmpeg.Probe(ctx, localOutputPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to probe output video metadata: %w", err)
 	}
 
 	outputResourceID := uuid.New()
@@ -70,7 +97,7 @@ func (h *VideoHandler) Execute(ctx context.Context, job *domain.Job) (*domain.Ex
 	}
 
 	log.Printf("[Job %s] Video pipeline completed successfully!", job.ID)
-	metadataJSON, _ := json.Marshal(metadata)
+	metadataJSON, _ := json.Marshal(outputMetadata)
 
 	return &domain.ExecutionResult{
 		OutputResourceID: &outputResourceID,
