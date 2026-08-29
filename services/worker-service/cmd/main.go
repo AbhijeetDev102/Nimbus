@@ -9,6 +9,7 @@ import (
 	"syscall"
 
 	"github.com/AbhijeetDev102/Nimbus/services/worker-service/internal/infrastructure/events"
+	"github.com/AbhijeetDev102/Nimbus/services/worker-service/internal/infrastructure/redis"
 	"github.com/AbhijeetDev102/Nimbus/services/worker-service/internal/infrastructure/repository"
 	"github.com/AbhijeetDev102/Nimbus/services/worker-service/internal/platform/dispatcher"
 	"github.com/AbhijeetDev102/Nimbus/services/worker-service/internal/workloads/video"
@@ -49,8 +50,11 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to init MinIO: %v", err)
 	}
+	// Redis Progress Publisher
+	redisAddr := env.GetString("REDIS_ADDR", "localhost:6379")
+	progressPub := redis.NewRedisProgressPublisher(redisAddr)
 	ffmpegService := video.NewFFmpegService()
-	videoHandler := video.NewVideoHandler(minioStorage, ffmpegService)
+	videoHandler := video.NewVideoHandler(minioStorage, ffmpegService, progressPub)
 
 	//Dispatcher
 	disp := dispatcher.NewDispatcher()
