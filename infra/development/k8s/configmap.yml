@@ -20,3 +20,6 @@ data:
   RESOURCE_SERVICE_URL: "resource-service:9093"
   JOB_SERVICE_URL: "job-service:9094"
   GATEWAY_HTTP_ADDR: ":8081"
+
+  # Redis
+  REDIS_ADDR: "redis:6379"
