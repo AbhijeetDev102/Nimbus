@@ -133,3 +133,24 @@ func (h *httpHandler) HandleCreateJobRequest(w http.ResponseWriter, r *http.Requ
 	}
 
 }
+
+func (h *httpHandler) HandleGetJob(w http.ResponseWriter, r *http.Request) {
+	jobID := r.PathValue("id")
+	if jobID == "" {
+		http.Error(w, "job ID is required", http.StatusBadRequest)
+		return
+	}
+
+	response, err := h.jobGrpcClient.Client.GetJob(r.Context(), &jobPb.GetJobRequest{
+		JobId: jobID,
+	})
+	if err != nil {
+		log.Printf("failed to get job via gRPC: %v", err)
+		http.Error(w, "job not found", http.StatusNotFound)
+		return
+	}
+
+	if err := writeJSON(w, http.StatusOK, response); err != nil {
+		log.Printf("failed to write JSON response: %v", err)
+	}
+}

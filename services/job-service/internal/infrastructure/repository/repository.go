@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/AbhijeetDev102/Nimbus/services/job-service/internal/domain"
+	"github.com/google/uuid"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
@@ -38,4 +39,14 @@ func (r *JobRepository) CreateJob(ctx context.Context, job *domain.Job, event *d
 
 		return nil
 	})
+}
+
+func (r *JobRepository) GetJob(ctx context.Context, id uuid.UUID) (*domain.Job, error) {
+	var job *domain.Job
+
+	if err := r.DB.WithContext(ctx).First(&job, "id=?", id).Error; err != nil {
+		return nil, err
+	}
+
+	return job, nil
 }

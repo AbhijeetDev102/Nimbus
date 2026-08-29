@@ -35,7 +35,10 @@ func (s *jobService) CreateJob(ctx context.Context, req *domain.CreateJobRequest
 		Parameters: req.Parameters,
 	}
 
-	jobJSON, _ := json.Marshal(job)
+	jobJSON, err := json.Marshal(job)
+	if err != nil {
+		return nil, err
+	}
 	outBoxEvent := &domain.OutboxEvent{
 		ID:            eventId,
 		AggregateType: "job",
@@ -51,4 +54,8 @@ func (s *jobService) CreateJob(ctx context.Context, req *domain.CreateJobRequest
 	}
 	return job, nil
 
+}
+
+func (s *jobService) GetJob(ctx context.Context, id uuid.UUID) (*domain.Job, error) {
+	return s.repo.GetJob(ctx, id)
 }

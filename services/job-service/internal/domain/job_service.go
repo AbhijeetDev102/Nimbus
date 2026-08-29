@@ -16,4 +16,5 @@ type CreateJobRequest struct {
 
 type JobService interface {
 	CreateJob(ctx context.Context, req *CreateJobRequest) (*Job, error)
+	GetJob(ctx context.Context, id uuid.UUID) (*Job, error)
 }

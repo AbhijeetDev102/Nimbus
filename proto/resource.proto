@@ -6,6 +6,7 @@ option go_package = "shared/proto/resource;resource";
 
 service ResourceService {
   rpc GeneratePSUrl(GeneratePSUrlRequest) returns (GeneratePSUrlResponse);
+  rpc GetDownloadUrl(GetDownloadUrlRequest) returns (GetDownloadUrlResponse);
 }
 
 message GeneratePSUrlRequest {
@@ -20,4 +21,15 @@ message GeneratePSUrlResponse {
   string ObjectKey=2;
   int64 ExpiresIn=3;
   string ResourceID=4;
+}
+
+message GetDownloadUrlRequest {
+    string ResourceID = 1;
+    int64 ExpiresIn = 2; // e.g. 3600 seconds
+}
+message GetDownloadUrlResponse {
+    string DownloadUrl = 1;
+    string ResourceID = 2;
+    string ObjectKey = 3;
+    int64 ExpiresIn = 4;
 }

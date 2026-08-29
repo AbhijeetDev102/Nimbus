@@ -45,6 +45,7 @@ func main() {
 
 	mux.HandleFunc("POST /resource/upload-url", httpHandler.HandleUploadUrlRequest)
 	mux.HandleFunc("POST /jobs/create", httpHandler.HandleCreateJobRequest)
+	mux.HandleFunc("GET /jobs/{id}", httpHandler.HandleGetJob)
 
 	server := &http.Server{
 		Addr:    httpAddr,
