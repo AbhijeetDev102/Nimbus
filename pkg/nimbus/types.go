@@ -64,3 +64,11 @@ type ProgressUpdate struct {
 type JobHandler interface {
 	Execute(ctx Context, job *Job) (*ExecutionResult, error)
 }
+
+type EventType string
+
+const (
+	EventJobCreated   EventType = "JobCreated"
+	EventJobCompleted EventType = "JobCompleted"
+	EventJobFailed    EventType = "JobFailed"
+)

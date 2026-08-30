@@ -101,3 +101,21 @@ This document tracks all major architectural and design decisions made during th
 1. **Zero Database Overhead:** PostgreSQL IOPS and WAL are completely isolated from high-frequency progress traffic.
 2. **Sub-Millisecond UI Latency:** Smooth real-time progress bar streaming directly to browser clients.
 3. **Decoupled Architecture:** Workers and API Gateways communicate asynchronously via Redis channels with zero direct coupling.
+
+## ADR 015: Fault Isolation & Panic Recovery in Pluggable Worker Execution (`safeExecute`)
+**Date:** 2026-08-30\
+**Context:** In an open-source SDK where external developers provide custom `JobHandler` implementations, unhandled runtime panics (e.g. nil pointer dereferences, slice out-of-bounds) would terminate the entire Go worker process. In Kubernetes, this causes pod crash loops (`CrashLoopBackOff`), stalls Kafka consumer partitions, and leaves the panicked job permanently orphaned in `RUNNING` status in PostgreSQL.\
+**Decision:** We implemented `safeExecute` wrapping the `Dispatcher.Dispatch` execution in a deferred `recover()` boundary. Any runtime panic is intercepted in memory, converted into a standard Go error (`panic in handler: %v`), and recorded as `FAILED` with the panic reason in PostgreSQL before committing the Kafka offset.\
+**Consequences:** 
+1. **Blast Radius Containment:** A bug in user-provided workload code cannot crash the worker daemon.
+2. **Zero Orphaned Jobs:** Panicked jobs transition deterministically to `FAILED` status with full error visibility.
+3. **Continuous Consumer Liveness:** The worker remains healthy and immediately processes the next job in Kafka.
+
+## ADR 016: Workload-Agnostic Context & Throttled Progress Metadata (`pkg/nimbus`)
+**Date:** 2026-08-30\
+**Context:** Hardcoding workload-specific parameters (such as `fps` or `speed`) into the core SDK context leaks video domain concepts into the generic platform engine. Custom workloads (such as image batching, AI Whisper transcription, or CSV parsing) require domain-specific metrics (e.g. `images_processed`, `tokens_per_sec`). Furthermore, unthrottled loops in user handlers could overwhelm the Redis Pub/Sub bus.\
+**Decision:** We designed `nimbus.Context` with `ReportProgress(percent float64)` and `ReportProgressDetails(percent float64, message string, metadata map[string]any)`. The context manages an internal thread-safe mutex and timestamp to automatically throttle outgoing Redis updates to at most once every 250ms (4 updates/sec), while always guaranteeing 100% completion ticks.\
+**Consequences:** 
+1. **Domain Decoupling:** Any workload can emit arbitrary dynamic progress metadata without modifying SDK schemas.
+2. **Zero Boilerplate for Developers:** Third-party developers call a single line (`ctx.ReportProgress(45.0)`) without writing custom throttling or Redis serialization logic.
+
