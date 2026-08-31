@@ -146,6 +146,11 @@ func (f *FFmpegService) Transcode(ctx context.Context, inputPath string, outputP
 			}
 		}
 	}
+	if err := scanner.Err(); err != nil {
+
+		_ = cmd.Wait()
+		return fmt.Errorf("failed reading ffmpeg progress output: %w", err)
+	}
 	// Wait for FFmpeg process to finish
 	if err := cmd.Wait(); err != nil {
 		return fmt.Errorf("ffmpeg transcoding failed: %w", err)

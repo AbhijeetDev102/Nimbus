@@ -1,34 +1,30 @@
 package video
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"log"
 	"os"
 	"path/filepath"
-	"time"
 
-	"github.com/AbhijeetDev102/Nimbus/services/worker-service/internal/domain"
+	"github.com/AbhijeetDev102/Nimbus/pkg/nimbus"
 	"github.com/google/uuid"
 
 	"gorm.io/datatypes"
 )
 
 type VideoHandler struct {
-	storage   *MinioInstance
-	ffmpeg    *FFmpegService
-	publisher domain.ProgressPublisher // 👈 Generic publisher interface
+	storage *MinioInstance
+	ffmpeg  *FFmpegService
 }
 
-func NewVideoHandler(storage *MinioInstance, ffmpeg *FFmpegService, publisher domain.ProgressPublisher) *VideoHandler {
+func NewVideoHandler(storage *MinioInstance, ffmpeg *FFmpegService) *VideoHandler {
 	return &VideoHandler{
-		storage:   storage,
-		ffmpeg:    ffmpeg,
-		publisher: publisher,
+		storage: storage,
+		ffmpeg:  ffmpeg,
 	}
 }
-func (h *VideoHandler) Execute(ctx context.Context, job *domain.Job) (*domain.ExecutionResult, error) {
+func (h *VideoHandler) Execute(ctx nimbus.Context, job *nimbus.Job) (*nimbus.ExecutionResult, error) {
 	tempDir, err := os.MkdirTemp("", "videoFile-*")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create the temp downlaod folder :%v", err)
@@ -60,21 +56,27 @@ func (h *VideoHandler) Execute(ctx context.Context, job *domain.Job) (*domain.Ex
 		return nil, fmt.Errorf("failed to probe video metadata: %w", err)
 	}
 
+	//Previous implementation without Nimbus SDK
 	// Throttle Redis progress events to at most once every 250ms
-	var lastPublished time.Time
+	// var lastPublished time.Time
+	// onProgress := func(percent float64, speed string, fps float64) {
+	// 	if time.Since(lastPublished) >= 250*time.Millisecond || percent >= 100.0 {
+	// 		lastPublished = time.Now()
+	// 		if h.publisher != nil {
+	// 			_ = h.publisher.Publish(ctx, &domain.ProgressUpdate{
+	// 				JobID:    job.ID.String(),
+	// 				Progress: percent,
+	// 				Speed:    speed,
+	// 				FPS:      fps,
+	// 				Status:   "RUNNING",
+	// 			})
+	// 		}
+	// 	}
+	// }
+
+	//New implementation with Nimbus SDK
 	onProgress := func(percent float64, speed string, fps float64) {
-		if time.Since(lastPublished) >= 250*time.Millisecond || percent >= 100.0 {
-			lastPublished = time.Now()
-			if h.publisher != nil {
-				_ = h.publisher.Publish(ctx, &domain.ProgressUpdate{
-					JobID:    job.ID.String(),
-					Progress: percent,
-					Speed:    speed,
-					FPS:      fps,
-					Status:   "RUNNING",
-				})
-			}
-		}
+		ctx.ReportProgressDetails(percent, "Transcoding video", map[string]any{"speed": speed, "fps": fps})
 	}
 
 	log.Printf("[Job %s] Transcoding video to %s (%s)...", job.ID, videoParams.Resolution, videoParams.Codec)
@@ -99,10 +101,9 @@ func (h *VideoHandler) Execute(ctx context.Context, job *domain.Job) (*domain.Ex
 	log.Printf("[Job %s] Video pipeline completed successfully!", job.ID)
 	metadataJSON, _ := json.Marshal(outputMetadata)
 
-	return &domain.ExecutionResult{
+	return &nimbus.ExecutionResult{
 		OutputResourceID: &outputResourceID,
 		Metadata:         datatypes.JSON(metadataJSON),
-		Error:            nil,
 	}, nil
 
 }
