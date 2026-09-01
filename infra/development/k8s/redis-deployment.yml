@@ -24,11 +24,6 @@ spec:
             limits:
               memory: "128Mi"
               cpu: "100m"
-        - name: REDIS_ADDR
-          valueFrom:
-            configMapKeyRef:
-              name: nimbus-config
-              key: REDIS_ADDR
 
 ---
 apiVersion: v1

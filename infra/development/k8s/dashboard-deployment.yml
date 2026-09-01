@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nimbus-dashboard
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nimbus-dashboard
+  template:
+    metadata:
+      labels:
+        app: nimbus-dashboard
+    spec:
+      containers:
+        - name: nimbus-dashboard
+          image: nimbus-dashboard
+          ports:
+            - containerPort: 3000
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 1000m
+              memory: 1Gi
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nimbus-dashboard
+spec:
+  selector:
+    app: nimbus-dashboard
+  ports:
+    - port: 3000
+      targetPort: 3000

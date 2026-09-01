@@ -28,8 +28,8 @@ spec:
             httpGet:
               path: /connectors
               port: 8083
-            initialDelaySeconds: 15
-            periodSeconds: 5
+            initialDelaySeconds: 30
+            periodSeconds: 10
             timeoutSeconds: 5
           env:
             - name: BOOTSTRAP_SERVERS
@@ -37,11 +37,11 @@ spec:
             - name: GROUP_ID
               value: "1"
             - name: CONFIG_STORAGE_TOPIC
-              value: "my_connect_configs"
+              value: "nimbus_connect_configs"
             - name: OFFSET_STORAGE_TOPIC
-              value: "my_connect_offsets"
+              value: "nimbus_connect_offsets"
             - name: STATUS_STORAGE_TOPIC
-              value: "my_connect_statuses"
+              value: "nimbus_connect_statuses"
             - name: CONFIG_STORAGE_REPLICATION_FACTOR
               value: "1"
             - name: OFFSET_STORAGE_REPLICATION_FACTOR

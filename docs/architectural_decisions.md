@@ -147,5 +147,10 @@ This document tracks all major architectural and design decisions made during th
 2. **Crash Resilience & Guaranteed Execution:** If a worker crashes mid-execution, PostgreSQL atomicity and Kafka durability ensure the next retry attempt is never lost.
 3. **Cluster-Wide Load Balancing:** Retries can be picked up by different worker replicas across nodes.
 
-
-
+## ADR 019: Control Plane Architecture & Database Aggregation over Heavy Monitoring Infrastructure
+**Context:** For cluster observability and job management, we evaluated deploying a full Prometheus/Grafana monitoring agent stack versus building a lightweight, purpose-built Control Plane Dashboard backed by direct PostgreSQL SQL aggregation and REST/gRPC endpoints.
+**Decision:** We prioritized a dedicated **Nimbus Control Plane & Developer Dashboard** and rejected heavy standalone monitoring agents (Prometheus/Grafana) for the core product.
+1. **Lightweight Aggregations (`GET /jobs/stats`):** Instead of running scraping daemons, cluster telemetry is calculated via a single atomic PostgreSQL conditional filter aggregation (`COUNT(*) FILTER (WHERE status = ...)`), delivering real-time statistics in <2ms with zero infrastructure overhead.
+2. **Safe Paginated Job Exploration (`GET /jobs`):** Implemented bounded `limit` and `offset` pagination with dynamic filtering by `status` and `job_type`.
+3. **Hero Execution Inspector:** Full lifecycle visibility (`QUEUED ➔ RUNNING ➔ COMPLETED/FAILED`), live WebSocket progress streaming (`/ws/jobs/{id}`), distributed lease tracking (`worker_id`), retry history, and dual input/output inspectors (Direct MinIO video playback and JSON tree inspector).
+**Consequences:** Dramatically reduces operational complexity and resource consumption while delivering a far more coherent, interactive developer experience tailored specifically to distributed job lifecycle management.

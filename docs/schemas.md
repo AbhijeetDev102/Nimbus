@@ -176,6 +176,7 @@ option go_package = "shared/proto/resource;resource";
 
 service ResourceService {
   rpc GeneratePSUrl(GeneratePSUrlRequest) returns (GeneratePSUrlResponse);
+  rpc GetDownloadUrl(GetDownloadUrlRequest) returns (GetDownloadUrlResponse);
 }
 
 message GeneratePSUrlRequest {
@@ -191,23 +192,19 @@ message GeneratePSUrlResponse {
   int64 ExpiresIn = 3;
   string ResourceID = 4;
 }
+
+message GetDownloadUrlRequest {
+  string ResourceID = 1;
+  int64 ExpiresIn = 2;
+}
+
+message GetDownloadUrlResponse {
+  string DownloadUrl = 1;
+  string ResourceID = 2;
+  string ObjectKey = 3;
+  int64 ExpiresIn = 4;
+}
 ```
-
-#### `GeneratePSUrlRequest` Parameters
-| Field | Tag | Protobuf Type | Description |
-|---|---|---|---|
-| `FileName` | `1` | `string` | The original file name of the upload target (e.g. `sample.mp4`). |
-| `ContentType` | `2` | `string` | MIME type (e.g. `video/mp4`). |
-| `FileSize` | `3` | `int64` | File size in bytes. |
-| `ResourceType` | `4` | `string` | Workload category (`VIDEO`, `IMAGE`, `DOCUMENT`). |
-
-#### `GeneratePSUrlResponse` Parameters
-| Field | Tag | Protobuf Type | Description |
-|---|---|---|---|
-| `UploadUrl` | `1` | `string` | Presigned MinIO PUT URL containing authentication tokens and headers. |
-| `ObjectKey` | `2` | `string` | Unique storage path key assigned to the object in MinIO. |
-| `ExpiresIn` | `3` | `int64` | URL expiration duration in seconds (default: 600s). |
-| `ResourceID` | `4` | `string` | The generated UUID string identifying this resource in PostgreSQL. |
 
 ---
 
@@ -225,10 +222,13 @@ option go_package = "shared/proto/job;job";
 
 service JobService {
   rpc CreateJob (CreateJobRequest) returns (CreateJobResponse);
+  rpc GetJob (GetJobRequest) returns (GetJobResponse);
+  rpc ListJobs (ListJobsRequest) returns (ListJobsResponse);
+  rpc GetJobStats (GetJobStatsRequest) returns (GetJobStatsResponse);
 }
 
 message CreateJobRequest {
-  string ResourceID = 1;
+  optional string ResourceID = 1;
   string JobType = 2;
   bytes Parameters = 3;
 }
@@ -237,7 +237,50 @@ message CreateJobResponse {
   string JobId = 1;
   string Status = 2;
 }
+
+message GetJobRequest {
+  string JobId = 1;
+}
+
+message GetJobResponse {
+  string JobId = 1;
+  optional string ResourceID = 2;
+  string JobType = 3;
+  string Status = 4;
+  int32 RetryCount = 5;
+  int32 MaxRetries = 6;
+  optional string ErrorMessage = 7;
+  optional string OutputResourceID = 8;
+  bytes Parameters = 12;
+  bytes Metadata = 13;
+  string CreatedAt = 9;
+  optional string StartedAt = 10;
+  optional string CompletedAt = 11;
+}
+
+message ListJobsRequest {
+  int32 Limit = 1;
+  int32 Offset = 2;
+  optional string Status = 3;
+  optional string JobType = 4;
+}
+
+message ListJobsResponse {
+  repeated GetJobResponse Jobs = 1;
+  int64 TotalCount = 2;
+}
+
+message GetJobStatsRequest {}
+
+message GetJobStatsResponse {
+  int64 Total = 1;
+  int64 Queued = 2;
+  int64 Running = 3;
+  int64 Completed = 4;
+  int64 Failed = 5;
+}
 ```
+
 
 #### `CreateJobRequest` Parameters
 | Field | Tag | Protobuf Type | Description |

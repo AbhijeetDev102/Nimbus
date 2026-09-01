@@ -15,7 +15,7 @@ k8s_resource("connect", port_forwards='8083:8083')
 
 local_resource(
     name="register-outbox-connector",
-    cmd="curl.exe --retry 15 --retry-all-errors --retry-connrefused --retry-delay 2 -s -X POST -H 'Content-Type: application/json' -d @infra/development/k8s/register-postgres-outbox.json http://localhost:8083/connectors",
+    cmd="curl --retry 15 --retry-all-errors --retry-connrefused --retry-delay 2 -s -X POST -H 'Content-Type: application/json' -d @infra/development/k8s/register-postgres-outbox.json http://localhost:8083/connectors",
     resource_deps=["connect"],
 )
 
@@ -41,3 +41,18 @@ k8s_resource("worker-service", resource_deps=["postgres", "minio", "kafka"])
 
 k8s_yaml("./infra/development/k8s/redis-deployment.yml")
 k8s_resource("redis", port_forwards='6379:6379')
+
+# ----------------------------------------------------
+# Nimbus Developer Studio & Control Plane Dashboard (Vite + React)
+# ----------------------------------------------------
+docker_build(
+    "nimbus-dashboard",
+    "./web",
+    dockerfile="./web/Dockerfile",
+    ignore=["./web/node_modules", "./web/dist"]
+)
+
+k8s_yaml("./infra/development/k8s/dashboard-deployment.yml")
+k8s_resource("nimbus-dashboard", port_forwards='3000:3000', links=['http://localhost:3000'], resource_deps=["api-gateway"])
+
+
