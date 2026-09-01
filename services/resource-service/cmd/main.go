@@ -26,13 +26,14 @@ func main() {
 	// 1. Connection Configurations
 	// Note: Use the API port (usually 9000), NOT the Console Web UI port (usually 9001).
 	endpoint := env.GetString("MINIO_ENDPOINT", "localhost:9000")
+	publicEndpoint := env.GetString("MINIO_PUBLIC_ENDPOINT", "localhost:9000")
 	accessKeyID := env.GetString("MINIO_ACCESS_KEY", "")     // Replace with your self-hosted access key
 	secretAccessKey := env.GetString("MINIO_SECRET_KEY", "") // Replace with your self-hosted secret key
 	useSSL := env.GetBool("MINIO_USE_SSL", false)            // Set to true if your self-hosted instance uses HTTPS
 
 	// 2. Initialize the MinIO Client
 	bucketName := env.GetString("MINIO_BUCKET_NAME", "resource-bucket")
-	minioInstance, err := storage.NewMinioInstance(endpoint, accessKeyID, secretAccessKey, useSSL, bucketName)
+	minioInstance, err := storage.NewMinioInstance(endpoint, publicEndpoint, accessKeyID, secretAccessKey, useSSL, bucketName)
 	if err != nil {
 		log.Fatalln("Failed to initialize MinIO client:", err)
 	}

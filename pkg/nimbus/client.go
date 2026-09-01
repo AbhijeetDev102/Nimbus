@@ -30,8 +30,8 @@ func NewClient(baseURL string) *Client {
 }
 
 type UploadURLResponse struct {
-	ResourceID string `json:"resource_id"`
-	UploadURL  string `json:"upload_url"`
+	ResourceID string `json:"resourceID"`
+	UploadURL  string `json:"uploadUrl"`
 }
 
 type DownloadURLResponse struct {
@@ -41,8 +41,8 @@ type DownloadURLResponse struct {
 // 1. GetUploadURL generates a Presigned S3 PUT URL for direct-to-storage uploads
 func (c *Client) GetUploadURL(ctx context.Context, filename, contentType string) (*UploadURLResponse, error) {
 	reqBody, err := json.Marshal(map[string]string{
-		"file_name":    filename,
-		"content_type": contentType,
+		"fileName":    filename,
+		"contentType": contentType,
 	})
 	if err != nil {
 		return nil, err
@@ -72,13 +72,13 @@ func (c *Client) GetUploadURL(ctx context.Context, filename, contentType string)
 }
 
 // 2. SubmitJob queues a new task into the Nimbus Transactional Outbox
-func (c *Client) SubmitJob(ctx context.Context, jobType JobType, resourceID uuid.UUID, parameters any) (*Job, error) {
+func (c *Client) SubmitJob(ctx context.Context, jobType JobType, resourceID *uuid.UUID, parameters any) (*Job, error) {
 	payload := map[string]any{
-		"job_type":   jobType,
+		"jobType":    jobType,
 		"parameters": parameters,
 	}
-	if resourceID != uuid.Nil {
-		payload["resource_id"] = resourceID.String()
+	if resourceID != nil && *resourceID != uuid.Nil {
+		payload["resourceID"] = resourceID.String()
 	}
 
 	reqBody, err := json.Marshal(payload)

@@ -10,18 +10,18 @@ import (
 
 type Job struct {
 	ID               uuid.UUID       `json:"id" gorm:"type:uuid;primaryKey"`
-	ResourceID       uuid.UUID       `json:"resource_id" gorm:"type:uuid;index;not null"`
+	ResourceID       *uuid.UUID      `json:"resource_id,omitempty" gorm:"type:uuid;index"`
 	JobType          types.JobType   `json:"job_type"`
 	Status           types.JobStatus `json:"status"`
 	RetryCount       int             `json:"retry_count"`
 	MaxRetries       int             `json:"max_retries"`
-	WorkerID         *uuid.UUID      `json:"worker_id"`
+	WorkerID         *uuid.UUID      `json:"worker_id,omitempty"`
 	Parameters       datatypes.JSON  `json:"parameters" gorm:"type:jsonb"`
-	ErrorMessage     *string         `json:"error_message"`
-	OutputResourceID *uuid.UUID      `json:"output_resource_id"`
+	ErrorMessage     *string         `json:"error_message,omitempty"`
+	OutputResourceID *uuid.UUID      `json:"output_resource_id,omitempty"`
 	CreatedAt        time.Time       `json:"created_at"`
-	StartedAt        *time.Time      `json:"started_at"`
-	CompletedAt      *time.Time      `json:"completed_at"`
+	StartedAt        *time.Time      `json:"started_at,omitempty"`
+	CompletedAt      *time.Time      `json:"completed_at,omitempty"`
 	UpdatedAt        time.Time       `json:"updated_at"`
 }
 

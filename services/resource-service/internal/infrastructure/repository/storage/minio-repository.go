@@ -10,21 +10,34 @@ import (
 )
 
 type minioInstance struct {
-	Client     *minio.Client
-	bucketName string
+	Client        *minio.Client
+	presignClient *minio.Client
+	bucketName    string
 }
 
-func NewMinioInstance(endpoint string, accessKeyID string, secretAccessKey string, useSSL bool, bucketName string) (*minioInstance, error) {
-	minioClient, err := minio.New(endpoint, &minio.Options{
+func NewMinioInstance(endpoint, publicEndpoint, accessKeyID, secretAccessKey string, useSSL bool, bucketName string) (*minioInstance, error) {
+	internalClient, err := minio.New(endpoint, &minio.Options{
 		Creds:  credentials.NewStaticV4(accessKeyID, secretAccessKey, ""),
 		Secure: useSSL,
+		Region: "us-east-1",
 	})
 	if err != nil {
 		return nil, err
 	}
+
+	presignClient, err := minio.New(publicEndpoint, &minio.Options{
+		Creds:  credentials.NewStaticV4(accessKeyID, secretAccessKey, ""),
+		Secure: useSSL,
+		Region: "us-east-1", // Disables internal network probe for bucket region
+	})
+	if err != nil {
+		return nil, err
+	}
+
 	return &minioInstance{
-		Client:     minioClient,
-		bucketName: bucketName,
+		Client:        internalClient,
+		presignClient: presignClient,
+		bucketName:    bucketName,
 	}, nil
 }
 
@@ -40,9 +53,8 @@ func (r *minioInstance) EnsureBucketExists(ctx context.Context) error {
 }
 
 func (r *minioInstance) GeneratePSUrl(ctx context.Context, resourceID string, objectKey string, expireIn int64) (*types.UploadUrlResponse, error) {
-	// Generate the Presigned PUT URL
-
-	uploadURL, err := r.Client.PresignedPutObject(ctx, r.bucketName, objectKey, time.Duration(expireIn)*time.Second)
+	// Generate the Presigned PUT URL using the public endpoint for browser client uploads
+	uploadURL, err := r.presignClient.PresignedPutObject(ctx, r.bucketName, objectKey, time.Duration(expireIn)*time.Second)
 	if err != nil {
 		return nil, err
 	}

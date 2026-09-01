@@ -25,6 +25,11 @@ func NewVideoHandler(storage *MinioInstance, ffmpeg *FFmpegService) *VideoHandle
 	}
 }
 func (h *VideoHandler) Execute(ctx nimbus.Context, job *nimbus.Job) (*nimbus.ExecutionResult, error) {
+
+	if job.ResourceID == nil {
+		return nil, fmt.Errorf("video transcode workload requires a valid resource_id")
+	}
+
 	tempDir, err := os.MkdirTemp("", "videoFile-*")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create the temp downlaod folder :%v", err)

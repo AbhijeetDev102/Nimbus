@@ -7,7 +7,7 @@ service JobService {
 }
 
 message CreateJobRequest{
-    string ResourceID=1;
+    optional string ResourceID=1;
     string JobType=2;
     bytes Parameters=3;
 }
@@ -23,14 +23,14 @@ message GetJobRequest{
 
 message GetJobResponse{
     string JobId = 1;
-    string ResourceID = 2;
+    optional string ResourceID = 2;
     string JobType = 3;
     string Status = 4;
     int32 RetryCount = 5;
     int32 MaxRetries = 6;
-    string ErrorMessage = 7;
-    string OutputResourceID = 8;
+    optional string ErrorMessage = 7;
+    optional string OutputResourceID = 8;
     string CreatedAt = 9;
-    string StartedAt = 10;
-    string CompletedAt = 11;
+    optional string StartedAt = 10;
+    optional string CompletedAt = 11;
 }

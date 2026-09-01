@@ -34,8 +34,16 @@ func (h *grpcHandler) CreateJob(ctx context.Context, req *pb.CreateJobRequest) (
 	jobType := req.GetJobType()
 	parameters := req.GetParameters()
 
-	if resourceID == "" {
-		return nil, status.Errorf(codes.InvalidArgument, "resourceID is not given")
+	var parserID *uuid.UUID
+	if resourceID != "" {
+
+		value, err := uuid.Parse(resourceID)
+
+		if err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "invalid resource ID format: %v", err)
+
+		}
+		parserID = &value
 	}
 	if jobType == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "jobType is not given")
@@ -45,11 +53,6 @@ func (h *grpcHandler) CreateJob(ctx context.Context, req *pb.CreateJobRequest) (
 		return nil, status.Errorf(codes.InvalidArgument, "parameters must be valid JSON")
 	}
 
-	parserID, err := uuid.Parse(resourceID)
-	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "invalid resource ID format: %v", err)
-
-	}
 	job, err := h.service.CreateJob(ctx, &domain.CreateJobRequest{
 		ResourceID: parserID,
 		JobType:    types.JobType(jobType),
@@ -77,26 +80,36 @@ func (h *grpcHandler) GetJob(ctx context.Context, req *pb.GetJobRequest) (*pb.Ge
 		return nil, status.Errorf(codes.NotFound, "job not found: %v", err)
 	}
 
-	var errMsg string
+	var errMsg *string
 	if job.ErrorMessage != nil {
-		errMsg = *job.ErrorMessage
+		errMsg = job.ErrorMessage
 	}
 
-	var outputResourceID string
+	var ResourceID *string
+	if job.ResourceID != nil {
+		s := job.ResourceID.String()
+		ResourceID = &s
+	}
+
+	var outputResourceID *string
 	if job.OutputResourceID != nil {
-		outputResourceID = job.OutputResourceID.String()
+		s := job.OutputResourceID.String()
+		outputResourceID = &s
 	}
-	var startedAt, completedAt string
+	var startedAt *string
 	if job.StartedAt != nil {
-		startedAt = job.StartedAt.Format(time.RFC3339)
+		s := job.StartedAt.Format(time.RFC3339)
+		startedAt = &s
 	}
+	var completedAt *string
 	if job.CompletedAt != nil {
-		completedAt = job.CompletedAt.Format(time.RFC3339)
+		s := job.CompletedAt.Format(time.RFC3339)
+		completedAt = &s
 	}
 
 	return &pb.GetJobResponse{
 		JobId:            job.ID.String(),
-		ResourceID:       job.ResourceID.String(),
+		ResourceID:       ResourceID,
 		JobType:          string(job.JobType),
 		Status:           string(job.Status),
 		RetryCount:       int32(job.RetryCount),

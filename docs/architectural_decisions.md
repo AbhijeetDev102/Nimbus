@@ -119,3 +119,17 @@ This document tracks all major architectural and design decisions made during th
 1. **Domain Decoupling:** Any workload can emit arbitrary dynamic progress metadata without modifying SDK schemas.
 2. **Zero Boilerplate for Developers:** Third-party developers call a single line (`ctx.ReportProgress(45.0)`) without writing custom throttling or Redis serialization logic.
 
+---
+
+## ADR 017: Workload-Agnostic Job Domain & Optional Resource Model
+**Date:** 2026-09-01\
+**Context:** The initial implementation enforced non-null `ResourceID` (`uuid.UUID NOT NULL`) across PostgreSQL schemas, Protobuf contracts, API Gateway ingestion, and the Worker SDK. This created a domain leak where the first workload (video transcoding) falsely dictated that every Nimbus task must operate on a stored object/file. Many distributed workloads (e.g., email dispatch, report generation, webhooks, analytics calculations, ML inference without prior storage) require only payload parameters without a persistent object storage asset.\
+**Decision:** 
+1. **Nullable Resource References:** `ResourceID` is changed to optional/nullable (`*uuid.UUID` / `*string`) across the database schema (`jobs` table), Protobuf service contracts (`proto/job.proto`), and SDK structs (`pkg/nimbus/types.go`).
+2. **Layered Validation Responsibility:** The core platform ingestion (API Gateway and Job Service) validates only platform-level requirements (`JobType` present and `Parameters` valid JSON). Specific workload handlers (e.g., `VideoHandler`) validate their own required domain inputs (asserting `job.ResourceID != nil`), keeping the core execution engine completely decoupled and generic.\
+**Consequences:** 
+1. **True Workload Agnosticism:** Nimbus can schedule and execute arbitrary compute, I/O, or data tasks with or without object storage resources.
+2. **Zero Ingress Friction:** Developers can submit lightweight transactional tasks directly via `POST /jobs` without requiring pre-upload presigned URL handshakes.
+3. **Safe Workload Isolation:** Workloads requiring binary storage safely assert their input prerequisites with descriptive error returns.
+
+

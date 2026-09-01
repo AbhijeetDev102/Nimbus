@@ -51,6 +51,10 @@ func main() {
 	//passing the grpc client to http handler constructor
 	httpHandler := httphandler.NewHttpHandler(resourceGrpcClient, jobGrpcClient, redisClient)
 
+	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("OK"))
+	})
 	mux.HandleFunc("POST /resource/upload-url", httpHandler.HandleUploadUrlRequest)
 	mux.HandleFunc("POST /jobs/create", httpHandler.HandleCreateJobRequest)
 	mux.HandleFunc("GET /jobs/{id}", httpHandler.HandleGetJob)

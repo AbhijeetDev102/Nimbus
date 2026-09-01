@@ -9,7 +9,7 @@ import (
 )
 
 type CreateJobRequest struct {
-	ResourceID uuid.UUID
+	ResourceID *uuid.UUID
 	JobType    types.JobType
 	Parameters datatypes.JSON
 }

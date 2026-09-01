@@ -94,7 +94,7 @@ type Resource struct {
 ```go
 type Job struct {
     ID               uuid.UUID      `gorm:"type:uuid;primaryKey"`
-    ResourceID       uuid.UUID      `gorm:"type:uuid;index;not null"`
+    ResourceID       *uuid.UUID     `gorm:"type:uuid;index"`
     JobType          JobType        `gorm:"type:varchar(50);not null"`
     Status           JobStatus      `gorm:"type:varchar(50);not null"`
     RetryCount       int            `gorm:"default:0"`
@@ -115,14 +115,14 @@ type Job struct {
 | Parameter | Type | Nullable / Constraints | Description & Working |
 |---|---|---|---|
 | `ID` | `uuid.UUID` | `PK`, Non-null | Unique identifier of the job instance. |
-| `ResourceID` | `uuid.UUID` | `Index`, Non-null | Foreign reference pointing to the input `Resource.ID` in the `resources` table. Connects the job to the input file. |
+| `ResourceID` | `*uuid.UUID` | `Index`, Nullable | Optional foreign reference pointing to the input `Resource.ID` in the `resources` table. Connects the job to an input file when binary storage is needed. `nil` for resource-less jobs. |
 | `JobType` | `JobType` | Non-null | Identifier of the operation to perform (`VIDEO_TRANSCODE`, `IMAGE_RESIZE`, etc.). Used by the Worker Dispatcher to route to the appropriate workload handler. |
 | `Status` | `JobStatus` | Non-null | State machine status of execution (`QUEUED`, `RUNNING`, `COMPLETED`, `FAILED`, `CANCELLED`, `RETRYING`). |
 | `RetryCount` | `int` | Non-null (Default: `0`) | Number of execution attempts completed so far after failures. |
 | `MaxRetries` | `int` | Non-null (Default: `3`) | Maximum number of retry attempts before the job transitions permanently to `FAILED`. |
 | `WorkerID` | `*uuid.UUID` | Nullable | UUID of the active worker executing the job. Set when a worker acquires the job lease. `nil` when queued. |
 | `Parameters` | `datatypes.JSON` | Nullable (`JSONB`) | Free-form, workload-specific dynamic JSON configuration (e.g. `{"resolution": "1080p", "codec": "h264", "bitrate": "4000k"}`). Gives infinite flexibility to future workloads without altering the DB schema. |
-| `OutputResourceID`| `*uuid.UUID` | Nullable | UUID referencing the newly generated output `Resource` record once processing succeeds. `nil` until completion. |
+| `OutputResourceID`| `*uuid.UUID` | Nullable | UUID referencing the newly generated output `Resource` record once processing succeeds. `nil` until completion or if no resource was produced. |
 | `ErrorMessage` | `*string` | Nullable (`TEXT`) | Stores the failure reason or error message if execution fails. Enables client/API error visibility. |
 | `CreatedAt` | `time.Time` | Non-null | Timestamp when the job was queued. |
 | `StartedAt` | `*time.Time` | Nullable | Timestamp when a worker picked up the job and set it to `RUNNING`. |

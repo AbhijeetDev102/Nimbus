@@ -50,12 +50,12 @@ func (h *httpHandler) HandleUploadUrlRequest(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	if requestBody.FileName == "" {
+	if requestBody.ContentType == "" {
 		http.Error(w, "content type is not specified", http.StatusBadRequest)
 		return
 	}
 
-	if requestBody.FileName == "" {
+	if requestBody.FileSize == 0 {
 		http.Error(w, "file size is not specified", http.StatusBadRequest)
 		return
 	}
@@ -108,9 +108,9 @@ func (h *httpHandler) HandleCreateJobRequest(w http.ResponseWriter, r *http.Requ
 		http.Error(w, "job type is not specified", http.StatusBadRequest)
 		return
 	}
-	if reqBody.ResourceID == "" {
-		http.Error(w, "resource id is not specified", http.StatusBadRequest)
-		return
+	var resourceID *string
+	if reqBody.ResourceID != "" {
+		resourceID = &reqBody.ResourceID
 	}
 	if len(reqBody.Parameters) == 0 || !json.Valid(reqBody.Parameters) {
 		http.Error(w, "parameters must be a valid JSON object", http.StatusBadRequest)
@@ -118,7 +118,7 @@ func (h *httpHandler) HandleCreateJobRequest(w http.ResponseWriter, r *http.Requ
 	}
 
 	response, err := h.jobGrpcClient.Client.CreateJob(r.Context(), &jobPb.CreateJobRequest{
-		ResourceID: reqBody.ResourceID,
+		ResourceID: resourceID,
 		JobType:    reqBody.JobType,
 		Parameters: reqBody.Parameters,
 	})

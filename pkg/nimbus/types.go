@@ -30,7 +30,7 @@ const (
 // Job represents a generic task submitted to the Nimbus platform
 type Job struct {
 	ID               uuid.UUID      `json:"id" gorm:"type:uuid;primaryKey"`
-	ResourceID       uuid.UUID      `json:"resource_id" gorm:"type:uuid;index;not null"`
+	ResourceID       *uuid.UUID     `json:"resource_id,omitempty" gorm:"type:uuid;index"`
 	JobType          JobType        `json:"job_type"`
 	Status           JobStatus      `json:"status"`
 	RetryCount       int            `json:"retry_count"`

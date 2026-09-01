@@ -23,7 +23,7 @@ const (
 
 type CreateJobRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	ResourceID    string                 `protobuf:"bytes,1,opt,name=ResourceID,proto3" json:"ResourceID,omitempty"`
+	ResourceID    *string                `protobuf:"bytes,1,opt,name=ResourceID,proto3,oneof" json:"ResourceID,omitempty"`
 	JobType       string                 `protobuf:"bytes,2,opt,name=JobType,proto3" json:"JobType,omitempty"`
 	Parameters    []byte                 `protobuf:"bytes,3,opt,name=Parameters,proto3" json:"Parameters,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -61,8 +61,8 @@ func (*CreateJobRequest) Descriptor() ([]byte, []int) {
 }
 
 func (x *CreateJobRequest) GetResourceID() string {
-	if x != nil {
-		return x.ResourceID
+	if x != nil && x.ResourceID != nil {
+		return *x.ResourceID
 	}
 	return ""
 }
@@ -180,16 +180,16 @@ func (x *GetJobRequest) GetJobId() string {
 type GetJobResponse struct {
 	state            protoimpl.MessageState `protogen:"open.v1"`
 	JobId            string                 `protobuf:"bytes,1,opt,name=JobId,proto3" json:"JobId,omitempty"`
-	ResourceID       string                 `protobuf:"bytes,2,opt,name=ResourceID,proto3" json:"ResourceID,omitempty"`
+	ResourceID       *string                `protobuf:"bytes,2,opt,name=ResourceID,proto3,oneof" json:"ResourceID,omitempty"`
 	JobType          string                 `protobuf:"bytes,3,opt,name=JobType,proto3" json:"JobType,omitempty"`
 	Status           string                 `protobuf:"bytes,4,opt,name=Status,proto3" json:"Status,omitempty"`
 	RetryCount       int32                  `protobuf:"varint,5,opt,name=RetryCount,proto3" json:"RetryCount,omitempty"`
 	MaxRetries       int32                  `protobuf:"varint,6,opt,name=MaxRetries,proto3" json:"MaxRetries,omitempty"`
-	ErrorMessage     string                 `protobuf:"bytes,7,opt,name=ErrorMessage,proto3" json:"ErrorMessage,omitempty"`
-	OutputResourceID string                 `protobuf:"bytes,8,opt,name=OutputResourceID,proto3" json:"OutputResourceID,omitempty"`
+	ErrorMessage     *string                `protobuf:"bytes,7,opt,name=ErrorMessage,proto3,oneof" json:"ErrorMessage,omitempty"`
+	OutputResourceID *string                `protobuf:"bytes,8,opt,name=OutputResourceID,proto3,oneof" json:"OutputResourceID,omitempty"`
 	CreatedAt        string                 `protobuf:"bytes,9,opt,name=CreatedAt,proto3" json:"CreatedAt,omitempty"`
-	StartedAt        string                 `protobuf:"bytes,10,opt,name=StartedAt,proto3" json:"StartedAt,omitempty"`
-	CompletedAt      string                 `protobuf:"bytes,11,opt,name=CompletedAt,proto3" json:"CompletedAt,omitempty"`
+	StartedAt        *string                `protobuf:"bytes,10,opt,name=StartedAt,proto3,oneof" json:"StartedAt,omitempty"`
+	CompletedAt      *string                `protobuf:"bytes,11,opt,name=CompletedAt,proto3,oneof" json:"CompletedAt,omitempty"`
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
@@ -232,8 +232,8 @@ func (x *GetJobResponse) GetJobId() string {
 }
 
 func (x *GetJobResponse) GetResourceID() string {
-	if x != nil {
-		return x.ResourceID
+	if x != nil && x.ResourceID != nil {
+		return *x.ResourceID
 	}
 	return ""
 }
@@ -267,15 +267,15 @@ func (x *GetJobResponse) GetMaxRetries() int32 {
 }
 
 func (x *GetJobResponse) GetErrorMessage() string {
-	if x != nil {
-		return x.ErrorMessage
+	if x != nil && x.ErrorMessage != nil {
+		return *x.ErrorMessage
 	}
 	return ""
 }
 
 func (x *GetJobResponse) GetOutputResourceID() string {
-	if x != nil {
-		return x.OutputResourceID
+	if x != nil && x.OutputResourceID != nil {
+		return *x.OutputResourceID
 	}
 	return ""
 }
@@ -288,15 +288,15 @@ func (x *GetJobResponse) GetCreatedAt() string {
 }
 
 func (x *GetJobResponse) GetStartedAt() string {
-	if x != nil {
-		return x.StartedAt
+	if x != nil && x.StartedAt != nil {
+		return *x.StartedAt
 	}
 	return ""
 }
 
 func (x *GetJobResponse) GetCompletedAt() string {
-	if x != nil {
-		return x.CompletedAt
+	if x != nil && x.CompletedAt != nil {
+		return *x.CompletedAt
 	}
 	return ""
 }
@@ -305,25 +305,26 @@ var File_job_proto protoreflect.FileDescriptor
 
 const file_job_proto_rawDesc = "" +
 	"\n" +
-	"\tjob.proto\x12\x03job\"l\n" +
-	"\x10CreateJobRequest\x12\x1e\n" +
+	"\tjob.proto\x12\x03job\"\x80\x01\n" +
+	"\x10CreateJobRequest\x12#\n" +
 	"\n" +
-	"ResourceID\x18\x01 \x01(\tR\n" +
-	"ResourceID\x12\x18\n" +
+	"ResourceID\x18\x01 \x01(\tH\x00R\n" +
+	"ResourceID\x88\x01\x01\x12\x18\n" +
 	"\aJobType\x18\x02 \x01(\tR\aJobType\x12\x1e\n" +
 	"\n" +
 	"Parameters\x18\x03 \x01(\fR\n" +
-	"Parameters\"A\n" +
+	"ParametersB\r\n" +
+	"\v_ResourceID\"A\n" +
 	"\x11CreateJobResponse\x12\x14\n" +
 	"\x05JobId\x18\x01 \x01(\tR\x05JobId\x12\x16\n" +
 	"\x06Status\x18\x02 \x01(\tR\x06Status\"%\n" +
 	"\rGetJobRequest\x12\x14\n" +
-	"\x05JobId\x18\x01 \x01(\tR\x05JobId\"\xe6\x02\n" +
+	"\x05JobId\x18\x01 \x01(\tR\x05JobId\"\xd2\x03\n" +
 	"\x0eGetJobResponse\x12\x14\n" +
-	"\x05JobId\x18\x01 \x01(\tR\x05JobId\x12\x1e\n" +
+	"\x05JobId\x18\x01 \x01(\tR\x05JobId\x12#\n" +
 	"\n" +
-	"ResourceID\x18\x02 \x01(\tR\n" +
-	"ResourceID\x12\x18\n" +
+	"ResourceID\x18\x02 \x01(\tH\x00R\n" +
+	"ResourceID\x88\x01\x01\x12\x18\n" +
 	"\aJobType\x18\x03 \x01(\tR\aJobType\x12\x16\n" +
 	"\x06Status\x18\x04 \x01(\tR\x06Status\x12\x1e\n" +
 	"\n" +
@@ -331,13 +332,19 @@ const file_job_proto_rawDesc = "" +
 	"RetryCount\x12\x1e\n" +
 	"\n" +
 	"MaxRetries\x18\x06 \x01(\x05R\n" +
-	"MaxRetries\x12\"\n" +
-	"\fErrorMessage\x18\a \x01(\tR\fErrorMessage\x12*\n" +
-	"\x10OutputResourceID\x18\b \x01(\tR\x10OutputResourceID\x12\x1c\n" +
-	"\tCreatedAt\x18\t \x01(\tR\tCreatedAt\x12\x1c\n" +
+	"MaxRetries\x12'\n" +
+	"\fErrorMessage\x18\a \x01(\tH\x01R\fErrorMessage\x88\x01\x01\x12/\n" +
+	"\x10OutputResourceID\x18\b \x01(\tH\x02R\x10OutputResourceID\x88\x01\x01\x12\x1c\n" +
+	"\tCreatedAt\x18\t \x01(\tR\tCreatedAt\x12!\n" +
 	"\tStartedAt\x18\n" +
-	" \x01(\tR\tStartedAt\x12 \n" +
-	"\vCompletedAt\x18\v \x01(\tR\vCompletedAt2{\n" +
+	" \x01(\tH\x03R\tStartedAt\x88\x01\x01\x12%\n" +
+	"\vCompletedAt\x18\v \x01(\tH\x04R\vCompletedAt\x88\x01\x01B\r\n" +
+	"\v_ResourceIDB\x0f\n" +
+	"\r_ErrorMessageB\x13\n" +
+	"\x11_OutputResourceIDB\f\n" +
+	"\n" +
+	"_StartedAtB\x0e\n" +
+	"\f_CompletedAt2{\n" +
 	"\n" +
 	"JobService\x12:\n" +
 	"\tCreateJob\x12\x15.job.CreateJobRequest\x1a\x16.job.CreateJobResponse\x121\n" +
@@ -379,6 +386,8 @@ func file_job_proto_init() {
 	if File_job_proto != nil {
 		return
 	}
+	file_job_proto_msgTypes[0].OneofWrappers = []any{}
+	file_job_proto_msgTypes[3].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
