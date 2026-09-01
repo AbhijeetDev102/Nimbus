@@ -317,6 +317,238 @@ func (x *GetJobResponse) GetCompletedAt() string {
 	return ""
 }
 
+type ListJobsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Limit         int32                  `protobuf:"varint,1,opt,name=Limit,proto3" json:"Limit,omitempty"`
+	Offset        int32                  `protobuf:"varint,2,opt,name=Offset,proto3" json:"Offset,omitempty"`
+	Status        *string                `protobuf:"bytes,3,opt,name=Status,proto3,oneof" json:"Status,omitempty"`
+	JobType       *string                `protobuf:"bytes,4,opt,name=JobType,proto3,oneof" json:"JobType,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListJobsRequest) Reset() {
+	*x = ListJobsRequest{}
+	mi := &file_job_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListJobsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListJobsRequest) ProtoMessage() {}
+
+func (x *ListJobsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_job_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListJobsRequest.ProtoReflect.Descriptor instead.
+func (*ListJobsRequest) Descriptor() ([]byte, []int) {
+	return file_job_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *ListJobsRequest) GetLimit() int32 {
+	if x != nil {
+		return x.Limit
+	}
+	return 0
+}
+
+func (x *ListJobsRequest) GetOffset() int32 {
+	if x != nil {
+		return x.Offset
+	}
+	return 0
+}
+
+func (x *ListJobsRequest) GetStatus() string {
+	if x != nil && x.Status != nil {
+		return *x.Status
+	}
+	return ""
+}
+
+func (x *ListJobsRequest) GetJobType() string {
+	if x != nil && x.JobType != nil {
+		return *x.JobType
+	}
+	return ""
+}
+
+type ListJobsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Jobs          []*GetJobResponse      `protobuf:"bytes,1,rep,name=Jobs,proto3" json:"Jobs,omitempty"`
+	TotalCount    int64                  `protobuf:"varint,2,opt,name=TotalCount,proto3" json:"TotalCount,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListJobsResponse) Reset() {
+	*x = ListJobsResponse{}
+	mi := &file_job_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListJobsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListJobsResponse) ProtoMessage() {}
+
+func (x *ListJobsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_job_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListJobsResponse.ProtoReflect.Descriptor instead.
+func (*ListJobsResponse) Descriptor() ([]byte, []int) {
+	return file_job_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *ListJobsResponse) GetJobs() []*GetJobResponse {
+	if x != nil {
+		return x.Jobs
+	}
+	return nil
+}
+
+func (x *ListJobsResponse) GetTotalCount() int64 {
+	if x != nil {
+		return x.TotalCount
+	}
+	return 0
+}
+
+type GetJobStatsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetJobStatsRequest) Reset() {
+	*x = GetJobStatsRequest{}
+	mi := &file_job_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetJobStatsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetJobStatsRequest) ProtoMessage() {}
+
+func (x *GetJobStatsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_job_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetJobStatsRequest.ProtoReflect.Descriptor instead.
+func (*GetJobStatsRequest) Descriptor() ([]byte, []int) {
+	return file_job_proto_rawDescGZIP(), []int{6}
+}
+
+type GetJobStatsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Total         int64                  `protobuf:"varint,1,opt,name=Total,proto3" json:"Total,omitempty"`
+	Queued        int64                  `protobuf:"varint,2,opt,name=Queued,proto3" json:"Queued,omitempty"`
+	Running       int64                  `protobuf:"varint,3,opt,name=Running,proto3" json:"Running,omitempty"`
+	Completed     int64                  `protobuf:"varint,4,opt,name=Completed,proto3" json:"Completed,omitempty"`
+	Failed        int64                  `protobuf:"varint,5,opt,name=Failed,proto3" json:"Failed,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetJobStatsResponse) Reset() {
+	*x = GetJobStatsResponse{}
+	mi := &file_job_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetJobStatsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetJobStatsResponse) ProtoMessage() {}
+
+func (x *GetJobStatsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_job_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetJobStatsResponse.ProtoReflect.Descriptor instead.
+func (*GetJobStatsResponse) Descriptor() ([]byte, []int) {
+	return file_job_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *GetJobStatsResponse) GetTotal() int64 {
+	if x != nil {
+		return x.Total
+	}
+	return 0
+}
+
+func (x *GetJobStatsResponse) GetQueued() int64 {
+	if x != nil {
+		return x.Queued
+	}
+	return 0
+}
+
+func (x *GetJobStatsResponse) GetRunning() int64 {
+	if x != nil {
+		return x.Running
+	}
+	return 0
+}
+
+func (x *GetJobStatsResponse) GetCompleted() int64 {
+	if x != nil {
+		return x.Completed
+	}
+	return 0
+}
+
+func (x *GetJobStatsResponse) GetFailed() int64 {
+	if x != nil {
+		return x.Failed
+	}
+	return 0
+}
+
 var File_job_proto protoreflect.FileDescriptor
 
 const file_job_proto_rawDesc = "" +
@@ -364,11 +596,33 @@ const file_job_proto_rawDesc = "" +
 	"\x11_OutputResourceIDB\f\n" +
 	"\n" +
 	"_StartedAtB\x0e\n" +
-	"\f_CompletedAt2{\n" +
+	"\f_CompletedAt\"\x92\x01\n" +
+	"\x0fListJobsRequest\x12\x14\n" +
+	"\x05Limit\x18\x01 \x01(\x05R\x05Limit\x12\x16\n" +
+	"\x06Offset\x18\x02 \x01(\x05R\x06Offset\x12\x1b\n" +
+	"\x06Status\x18\x03 \x01(\tH\x00R\x06Status\x88\x01\x01\x12\x1d\n" +
+	"\aJobType\x18\x04 \x01(\tH\x01R\aJobType\x88\x01\x01B\t\n" +
+	"\a_StatusB\n" +
+	"\n" +
+	"\b_JobType\"[\n" +
+	"\x10ListJobsResponse\x12'\n" +
+	"\x04Jobs\x18\x01 \x03(\v2\x13.job.GetJobResponseR\x04Jobs\x12\x1e\n" +
+	"\n" +
+	"TotalCount\x18\x02 \x01(\x03R\n" +
+	"TotalCount\"\x14\n" +
+	"\x12GetJobStatsRequest\"\x93\x01\n" +
+	"\x13GetJobStatsResponse\x12\x14\n" +
+	"\x05Total\x18\x01 \x01(\x03R\x05Total\x12\x16\n" +
+	"\x06Queued\x18\x02 \x01(\x03R\x06Queued\x12\x18\n" +
+	"\aRunning\x18\x03 \x01(\x03R\aRunning\x12\x1c\n" +
+	"\tCompleted\x18\x04 \x01(\x03R\tCompleted\x12\x16\n" +
+	"\x06Failed\x18\x05 \x01(\x03R\x06Failed2\xf6\x01\n" +
 	"\n" +
 	"JobService\x12:\n" +
 	"\tCreateJob\x12\x15.job.CreateJobRequest\x1a\x16.job.CreateJobResponse\x121\n" +
-	"\x06GetJob\x12\x12.job.GetJobRequest\x1a\x13.job.GetJobResponseB\x16Z\x14shared/proto/job;jobb\x06proto3"
+	"\x06GetJob\x12\x12.job.GetJobRequest\x1a\x13.job.GetJobResponse\x127\n" +
+	"\bListJobs\x12\x14.job.ListJobsRequest\x1a\x15.job.ListJobsResponse\x12@\n" +
+	"\vGetJobStats\x12\x17.job.GetJobStatsRequest\x1a\x18.job.GetJobStatsResponseB\x16Z\x14shared/proto/job;jobb\x06proto3"
 
 var (
 	file_job_proto_rawDescOnce sync.Once
@@ -382,23 +636,32 @@ func file_job_proto_rawDescGZIP() []byte {
 	return file_job_proto_rawDescData
 }
 
-var file_job_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_job_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
 var file_job_proto_goTypes = []any{
-	(*CreateJobRequest)(nil),  // 0: job.CreateJobRequest
-	(*CreateJobResponse)(nil), // 1: job.CreateJobResponse
-	(*GetJobRequest)(nil),     // 2: job.GetJobRequest
-	(*GetJobResponse)(nil),    // 3: job.GetJobResponse
+	(*CreateJobRequest)(nil),    // 0: job.CreateJobRequest
+	(*CreateJobResponse)(nil),   // 1: job.CreateJobResponse
+	(*GetJobRequest)(nil),       // 2: job.GetJobRequest
+	(*GetJobResponse)(nil),      // 3: job.GetJobResponse
+	(*ListJobsRequest)(nil),     // 4: job.ListJobsRequest
+	(*ListJobsResponse)(nil),    // 5: job.ListJobsResponse
+	(*GetJobStatsRequest)(nil),  // 6: job.GetJobStatsRequest
+	(*GetJobStatsResponse)(nil), // 7: job.GetJobStatsResponse
 }
 var file_job_proto_depIdxs = []int32{
-	0, // 0: job.JobService.CreateJob:input_type -> job.CreateJobRequest
-	2, // 1: job.JobService.GetJob:input_type -> job.GetJobRequest
-	1, // 2: job.JobService.CreateJob:output_type -> job.CreateJobResponse
-	3, // 3: job.JobService.GetJob:output_type -> job.GetJobResponse
-	2, // [2:4] is the sub-list for method output_type
-	0, // [0:2] is the sub-list for method input_type
-	0, // [0:0] is the sub-list for extension type_name
-	0, // [0:0] is the sub-list for extension extendee
-	0, // [0:0] is the sub-list for field type_name
+	3, // 0: job.ListJobsResponse.Jobs:type_name -> job.GetJobResponse
+	0, // 1: job.JobService.CreateJob:input_type -> job.CreateJobRequest
+	2, // 2: job.JobService.GetJob:input_type -> job.GetJobRequest
+	4, // 3: job.JobService.ListJobs:input_type -> job.ListJobsRequest
+	6, // 4: job.JobService.GetJobStats:input_type -> job.GetJobStatsRequest
+	1, // 5: job.JobService.CreateJob:output_type -> job.CreateJobResponse
+	3, // 6: job.JobService.GetJob:output_type -> job.GetJobResponse
+	5, // 7: job.JobService.ListJobs:output_type -> job.ListJobsResponse
+	7, // 8: job.JobService.GetJobStats:output_type -> job.GetJobStatsResponse
+	5, // [5:9] is the sub-list for method output_type
+	1, // [1:5] is the sub-list for method input_type
+	1, // [1:1] is the sub-list for extension type_name
+	1, // [1:1] is the sub-list for extension extendee
+	0, // [0:1] is the sub-list for field type_name
 }
 
 func init() { file_job_proto_init() }
@@ -408,13 +671,14 @@ func file_job_proto_init() {
 	}
 	file_job_proto_msgTypes[0].OneofWrappers = []any{}
 	file_job_proto_msgTypes[3].OneofWrappers = []any{}
+	file_job_proto_msgTypes[4].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_job_proto_rawDesc), len(file_job_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   4,
+			NumMessages:   8,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

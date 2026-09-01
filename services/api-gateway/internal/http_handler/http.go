@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strconv"
 
 	grpcclient "github.com/AbhijeetDev102/Nimbus/services/api-gateway/internal/grpc_client"
 	"github.com/AbhijeetDev102/Nimbus/services/api-gateway/pkg/types"
@@ -260,5 +261,111 @@ func (h *httpHandler) HandleJobProgressWS(w http.ResponseWriter, r *http.Request
 				return // Client closed browser tab
 			}
 		}
+	}
+}
+
+func mapProtoToHTTPJob(pbJob *jobPb.GetJobResponse) types.GetJobResponse {
+	var params json.RawMessage
+	if len(pbJob.GetParameters()) > 0 {
+		params = json.RawMessage(pbJob.GetParameters())
+	}
+	var metadata json.RawMessage
+	if len(pbJob.GetMetadata()) > 0 {
+		metadata = json.RawMessage(pbJob.GetMetadata())
+	}
+	return types.GetJobResponse{
+		JobID:            pbJob.GetJobId(),
+		ResourceID:       pbJob.ResourceID,
+		JobType:          pbJob.GetJobType(),
+		Status:           pbJob.GetStatus(),
+		RetryCount:       pbJob.GetRetryCount(),
+		MaxRetries:       pbJob.GetMaxRetries(),
+		ErrorMessage:     pbJob.ErrorMessage,
+		OutputResourceID: pbJob.OutputResourceID,
+		Parameters:       params,
+		Metadata:         metadata,
+		CreatedAt:        pbJob.GetCreatedAt(),
+		StartedAt:        pbJob.StartedAt,
+		CompletedAt:      pbJob.CompletedAt,
+	}
+}
+
+func (h *httpHandler) HandleListJobs(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query()
+	limitStr := query.Get("limit")
+	offsetStr := query.Get("offset")
+	status := query.Get("status")
+	jobType := query.Get("jobType")
+
+	limit := 20
+	if limitStr != "" {
+		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 {
+			limit = l
+		}
+	}
+	offset := 0
+	if offsetStr != "" {
+		if o, err := strconv.Atoi(offsetStr); err == nil && o >= 0 {
+			offset = o
+		}
+	}
+
+	var statusPtr *string
+	if status != "" {
+		statusPtr = &status
+	}
+
+	var jobTypePtr *string
+	if jobType != "" {
+		jobTypePtr = &jobType
+	}
+
+	response, err := h.jobGrpcClient.Client.ListJobs(r.Context(), &jobPb.ListJobsRequest{
+		Limit:   int32(limit),
+		Offset:  int32(offset),
+		Status:  statusPtr,
+		JobType: jobTypePtr,
+	})
+	if err != nil {
+		log.Printf("failed to list jobs via gRPC: %v", err)
+		http.Error(w, "failed to list jobs", http.StatusInternalServerError)
+		return
+	}
+
+	httpJobs := make([]types.GetJobResponse, len(response.GetJobs()))
+	for i, j := range response.GetJobs() {
+		httpJobs[i] = mapProtoToHTTPJob(j)
+	}
+
+	res := types.ListJobsResponse{
+		Jobs:       httpJobs,
+		TotalCount: response.GetTotalCount(),
+		Limit:      limit,
+		Offset:     offset,
+	}
+
+	if err := writeJSON(w, http.StatusOK, res); err != nil {
+		log.Printf("failed to write JSON response: %v", err)
+	}
+}
+
+func (h *httpHandler) HandleGetJobStats(w http.ResponseWriter, r *http.Request) {
+	response, err := h.jobGrpcClient.Client.GetJobStats(r.Context(), &jobPb.GetJobStatsRequest{})
+	if err != nil {
+		log.Printf("failed to get job stats via gRPC: %v", err)
+		http.Error(w, "failed to get job stats", http.StatusInternalServerError)
+		return
+	}
+
+	stats := types.JobStatsResponse{
+		Total:     response.GetTotal(),
+		Queued:    response.GetQueued(),
+		Running:   response.GetRunning(),
+		Completed: response.GetCompleted(),
+		Failed:    response.GetFailed(),
+	}
+
+	if err := writeJSON(w, http.StatusOK, stats); err != nil {
+		log.Printf("failed to write JSON response: %v", err)
 	}
 }

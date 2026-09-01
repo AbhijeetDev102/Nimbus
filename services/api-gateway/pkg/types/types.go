@@ -28,3 +28,18 @@ type GetJobResponse struct {
 	StartedAt        *string         `json:"startedAt,omitempty"`
 	CompletedAt      *string         `json:"completedAt,omitempty"`
 }
+
+type ListJobsResponse struct {
+	Jobs       []GetJobResponse `json:"jobs"`
+	TotalCount int64            `json:"totalCount"`
+	Limit      int              `json:"limit"`
+	Offset     int              `json:"offset"`
+}
+
+type JobStatsResponse struct {
+	Total     int64 `json:"total"`
+	Queued    int64 `json:"queued"`
+	Running   int64 `json:"running"`
+	Completed int64 `json:"completed"`
+	Failed    int64 `json:"failed"`
+}

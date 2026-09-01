@@ -59,3 +59,11 @@ func (s *jobService) CreateJob(ctx context.Context, req *domain.CreateJobRequest
 func (s *jobService) GetJob(ctx context.Context, id uuid.UUID) (*domain.Job, error) {
 	return s.repo.GetJob(ctx, id)
 }
+
+func (s *jobService) ListJobs(ctx context.Context, req *domain.ListJobsRequest) ([]*domain.Job, int64, error) {
+	return s.repo.ListJobs(ctx, req)
+}
+
+func (s *jobService) GetJobStats(ctx context.Context) (*domain.JobStats, error) {
+	return s.repo.GetJobStats(ctx)
+}

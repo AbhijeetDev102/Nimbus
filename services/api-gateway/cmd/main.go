@@ -58,6 +58,8 @@ func main() {
 	mux.HandleFunc("POST /resource/upload-url", httpHandler.HandleUploadUrlRequest)
 	mux.HandleFunc("GET /resource/{id}/download", httpHandler.HandleGetDownloadUrl)
 	mux.HandleFunc("POST /jobs/create", httpHandler.HandleCreateJobRequest)
+	mux.HandleFunc("GET /jobs", httpHandler.HandleListJobs)
+	mux.HandleFunc("GET /jobs/stats", httpHandler.HandleGetJobStats)
 	mux.HandleFunc("GET /jobs/{id}", httpHandler.HandleGetJob)
 	mux.HandleFunc("GET /ws/jobs/{id}", httpHandler.HandleJobProgressWS) // <-- Real-time WebSocket!
 

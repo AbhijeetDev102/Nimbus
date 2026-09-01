@@ -35,3 +35,11 @@ type OutboxEvent struct {
 	Payload       datatypes.JSON  `gorm:"type:jsonb;not null"` // The JSON data the Worker needs
 	CreatedAt     time.Time
 }
+
+type JobStats struct {
+	Total     int64 `json:"total"`
+	Queued    int64 `json:"queued"`
+	Running   int64 `json:"running"`
+	Completed int64 `json:"completed"`
+	Failed    int64 `json:"failed"`
+}

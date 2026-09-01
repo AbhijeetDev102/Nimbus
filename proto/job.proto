@@ -4,6 +4,8 @@ option go_package = "shared/proto/job;job";
 service JobService {
     rpc CreateJob (CreateJobRequest) returns (CreateJobResponse);
     rpc GetJob (GetJobRequest) returns (GetJobResponse);
+    rpc ListJobs (ListJobsRequest) returns (ListJobsResponse);
+    rpc GetJobStats (GetJobStatsRequest) returns (GetJobStatsResponse);
 }
 
 message CreateJobRequest{
@@ -36,3 +38,26 @@ message GetJobResponse{
     optional string StartedAt = 10;
     optional string CompletedAt = 11;
 }
+
+message ListJobsRequest {
+    int32 Limit = 1;
+    int32 Offset = 2;
+    optional string Status = 3;
+    optional string JobType = 4;
+}
+
+message ListJobsResponse {
+    repeated GetJobResponse Jobs = 1;
+    int64 TotalCount = 2;
+}
+
+message GetJobStatsRequest {}
+
+message GetJobStatsResponse {
+    int64 Total = 1;
+    int64 Queued = 2;
+    int64 Running = 3;
+    int64 Completed = 4;
+    int64 Failed = 5;
+}
+
