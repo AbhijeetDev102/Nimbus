@@ -7,6 +7,7 @@ import (
 	"syscall"
 
 	"github.com/AbhijeetDev102/Nimbus/pkg/nimbus"
+	calculator "github.com/AbhijeetDev102/Nimbus/services/worker-service/internal/workloads/Calculator"
 	"github.com/AbhijeetDev102/Nimbus/services/worker-service/internal/workloads/video"
 	"github.com/AbhijeetDev102/Nimbus/shared/env"
 	"github.com/joho/godotenv"
@@ -42,6 +43,9 @@ func main() {
 	// Register the Workload with the Worker Engine
 
 	worker.Register(nimbus.TypeVideoTranscode, videoHandler)
+
+	calculatorHandler := calculator.NewCalculator()
+	worker.Register("calculator", calculatorHandler)
 
 	// Start the Worker with Gracefull Shutdown
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGTERM)

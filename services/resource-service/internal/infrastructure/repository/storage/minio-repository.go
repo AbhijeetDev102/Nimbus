@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"net/url"
 	"time"
 
 	"github.com/AbhijeetDev102/Nimbus/shared/types"
@@ -64,4 +65,13 @@ func (r *minioInstance) GeneratePSUrl(ctx context.Context, resourceID string, ob
 		ExpiresIn:  expireIn,
 		ResourceID: resourceID,
 	}, nil
+}
+
+func (r *minioInstance) GeneratePSDownloadUrl(ctx context.Context, objectKey string, expiresIn int64) (string, error) {
+	reqParams := make(url.Values)
+	presignedURL, err := r.presignClient.PresignedGetObject(ctx, r.bucketName, objectKey, time.Duration(expiresIn)*time.Second, reqParams)
+	if err != nil {
+		return "", err
+	}
+	return presignedURL.String(), nil
 }

@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/twmb/franz-go/pkg/kgo"
+	"gorm.io/datatypes"
 )
 
 func (w *Worker) Start(ctx context.Context) error {
@@ -93,13 +94,21 @@ func (w *Worker) processRecord(ctx context.Context, record *kgo.Record) {
 	//Record Final State in PostgreSQL
 
 	if err != nil {
-		w.FailJob(ctx, job.ID, err.Error())
+		if job.RetryCount+1 < job.MaxRetries {
+			log.Printf("[Job %s] Attempt %d/%d failed: %v. Re-queueing via Outbox...", job.ID, job.RetryCount+1, job.MaxRetries, err)
+			_ = w.RetryJob(ctx, &job, err.Error())
+		} else {
+			log.Printf("[Job %s] Max retries (%d) exhausted. Failing permanently: %v", job.ID, job.MaxRetries, err)
+			_ = w.FailJob(ctx, job.ID, err.Error())
+		}
 	} else {
 		var outputID *uuid.UUID
+		var metadata datatypes.JSON
 		if result != nil {
 			outputID = result.OutputResourceID
+			metadata = result.Metadata
 		}
-		w.CompleteJob(ctx, job.ID, outputID)
+		w.CompleteJob(ctx, job.ID, outputID, metadata)
 	}
 
 	// Commit kafka offset

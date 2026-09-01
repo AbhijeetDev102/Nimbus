@@ -53,12 +53,15 @@ type Resource struct {
 
 type StorageProvider interface {
 	GeneratePSUrl(ctx context.Context, resourceID string, objectKey string, expireIn int64) (*types.UploadUrlResponse, error)
+	GeneratePSDownloadUrl(ctx context.Context, objectKey string, expiresIn int64) (string, error)
 }
 
 type ResourceRepository interface {
 	CreateResource(ctx context.Context, resource *Resource) error
+	GetResource(ctx context.Context, id uuid.UUID) (*Resource, error)
 }
 
 type ResourceService interface {
 	GeneratePSUrl(ctx context.Context, req *types.UploadUrlRequest) (*types.UploadUrlResponse, error)
+	GetDownloadUrl(ctx context.Context, id uuid.UUID, expiresIn int64) (string, error)
 }

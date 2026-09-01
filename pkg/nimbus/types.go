@@ -39,10 +39,12 @@ type Job struct {
 	WorkerID         *uuid.UUID     `json:"worker_id,omitempty"`
 	ErrorMessage     *string        `json:"error_message,omitempty"`
 	OutputResourceID *uuid.UUID     `json:"output_resource_id,omitempty"`
-	CreatedAt        time.Time      `json:"created_at"`
-	StartedAt        *time.Time     `json:"started_at,omitempty"`
-	CompletedAt      *time.Time     `json:"completed_at,omitempty"`
-	UpdatedAt        time.Time      `json:"updated_at"`
+	Metadata         datatypes.JSON `json:"metadata,omitempty" gorm:"type:jsonb"`
+
+	CreatedAt   time.Time  `json:"created_at"`
+	StartedAt   *time.Time `json:"started_at,omitempty"`
+	CompletedAt *time.Time `json:"completed_at,omitempty"`
+	UpdatedAt   time.Time  `json:"updated_at"`
 }
 
 // ExecutionResult is returned by a JobHandler upon completion
@@ -72,3 +74,12 @@ const (
 	EventJobCompleted EventType = "JobCompleted"
 	EventJobFailed    EventType = "JobFailed"
 )
+
+type OutboxEvent struct {
+	ID            uuid.UUID      `gorm:"type:uuid;primaryKey"`
+	AggregateType string         `gorm:"type:varchar(50);not null"`
+	AggregateID   uuid.UUID      `gorm:"type:uuid;not null"`
+	EventType     EventType      `gorm:"type:varchar(50);not null"`
+	Payload       datatypes.JSON `gorm:"type:jsonb;not null"`
+	CreatedAt     time.Time
+}

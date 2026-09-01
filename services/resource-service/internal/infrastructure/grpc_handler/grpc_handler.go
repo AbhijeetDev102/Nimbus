@@ -6,6 +6,7 @@ import (
 	"github.com/AbhijeetDev102/Nimbus/services/resource-service/internal/domain"
 	pb "github.com/AbhijeetDev102/Nimbus/shared/proto/resource"
 	"github.com/AbhijeetDev102/Nimbus/shared/types"
+	"github.com/google/uuid"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -61,5 +62,33 @@ func (h *grpcHandler) GeneratePSUrl(ctx context.Context, req *pb.GeneratePSUrlRe
 		ObjectKey:  response.ObjectKey,
 		ExpiresIn:  response.ExpiresIn,
 		ResourceID: response.ResourceID,
+	}, nil
+}
+
+func (h *grpcHandler) GetDownloadUrl(ctx context.Context, req *pb.GetDownloadUrlRequest) (*pb.GetDownloadUrlResponse, error) {
+	resourceIDStr := req.GetResourceID()
+	if resourceIDStr == "" {
+		return nil, status.Error(codes.InvalidArgument, "resourceID is required")
+	}
+
+	resourceID, err := uuid.Parse(resourceIDStr)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid resourceID format: %v", err)
+	}
+
+	expiresIn := req.GetExpiresIn()
+	if expiresIn <= 0 {
+		expiresIn = 3600
+	}
+
+	downloadURL, err := h.service.GetDownloadUrl(ctx, resourceID, expiresIn)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to generate download url: %v", err)
+	}
+
+	return &pb.GetDownloadUrlResponse{
+		DownloadUrl: downloadURL,
+		ResourceID:  resourceIDStr,
+		ExpiresIn:   expiresIn,
 	}, nil
 }

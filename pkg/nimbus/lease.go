@@ -2,9 +2,12 @@ package nimbus
 
 import (
 	"context"
+	"encoding/json"
 	"time"
 
 	"github.com/google/uuid"
+	"gorm.io/datatypes"
+	"gorm.io/gorm"
 )
 
 func (w *Worker) ClaimJob(ctx context.Context, jobID, workerID uuid.UUID) (bool, error) {
@@ -26,7 +29,7 @@ func (w *Worker) ClaimJob(ctx context.Context, jobID, workerID uuid.UUID) (bool,
 	return result.RowsAffected > 0, nil
 }
 
-func (w *Worker) CompleteJob(ctx context.Context, jobID uuid.UUID, outputResourceID *uuid.UUID) error {
+func (w *Worker) CompleteJob(ctx context.Context, jobID uuid.UUID, outputResourceID *uuid.UUID, metadata datatypes.JSON) error {
 	result := w.db.WithContext(ctx).
 		Model(&Job{}).
 		Where("id=? AND status=?", jobID, JobRunning).
@@ -34,12 +37,57 @@ func (w *Worker) CompleteJob(ctx context.Context, jobID uuid.UUID, outputResourc
 			"status":             JobCompleted,
 			"output_resource_id": outputResourceID,
 			"completed_at":       time.Now(),
+			"metadata":           metadata,
 		})
 	if result.Error != nil {
 		return result.Error
 	}
 
 	return nil
+}
+
+func (w *Worker) RetryJob(ctx context.Context, job *Job, reason string) error {
+	now := time.Now()
+	nextRetryCount := job.RetryCount + 1
+
+	jobCopy := *job
+	jobCopy.RetryCount = nextRetryCount
+	jobCopy.Status = JobQueued
+	jobCopy.WorkerID = nil
+	jobCopy.ErrorMessage = &reason
+	jobCopy.UpdatedAt = now
+
+	jobJSON, err := json.Marshal(jobCopy)
+	if err != nil {
+		return err
+	}
+
+	outboxEvent := &OutboxEvent{
+		ID:            uuid.New(),
+		AggregateType: "job",
+		AggregateID:   job.ID,
+		EventType:     EventJobCreated,
+		Payload:       datatypes.JSON(jobJSON),
+		CreatedAt:     now,
+	}
+
+	return w.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// 1. Reset job state to QUEUED so any worker can claim it
+		if err := tx.Model(&Job{}).
+			Where("id = ? AND status = ?", job.ID, JobRunning).
+			Updates(map[string]interface{}{
+				"status":        JobQueued,
+				"retry_count":   nextRetryCount,
+				"worker_id":     nil,
+				"error_message": reason,
+				"updated_at":    now,
+			}).Error; err != nil {
+			return err
+		}
+
+		// 2. Insert Outbox Event to emit back to Kafka via Debezium
+		return tx.Create(outboxEvent).Error
+	})
 }
 
 func (w *Worker) FailJob(ctx context.Context, jobID uuid.UUID, reason string) error {

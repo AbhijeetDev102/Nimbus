@@ -132,4 +132,20 @@ This document tracks all major architectural and design decisions made during th
 2. **Zero Ingress Friction:** Developers can submit lightweight transactional tasks directly via `POST /jobs` without requiring pre-upload presigned URL handshakes.
 3. **Safe Workload Isolation:** Workloads requiring binary storage safely assert their input prerequisites with descriptive error returns.
 
+---
+
+## ADR 018: Distributed Outbox Re-Queue for Resilient Retries
+**Date:** 2026-09-01\
+**Context:** When a worker execution encounters a transient error (network blip, database lock, temporary API 503), in-worker sleep retries (`time.Sleep`) block Go worker threads and leave jobs stuck in `RUNNING` status if the worker pod crashes during the backoff delay. Furthermore, local retries cannot load-balance recovery across healthy sibling workers in the cluster.\
+**Decision:** We implemented an **Asynchronous Distributed Outbox Re-Queue** pattern (`Worker.RetryJob`). When a job fails and `job.RetryCount + 1 < job.MaxRetries`:
+1. The worker executes an atomic PostgreSQL transaction that updates the job (`status = 'QUEUED'`, `worker_id = NULL`, `retry_count = retry_count + 1`, `error_message = err.Error()`) and simultaneously inserts an `OutboxEvent` (`event_type = 'JobCreated'`).
+2. Debezium captures the WAL insert and routes the event to Kafka (`job.events`).
+3. The current Kafka offset is committed, immediately freeing the worker thread.
+4. Any available worker in the cluster claims the next attempt using atomic conditional updates (ADR 010).\
+**Consequences:** 
+1. **Zero Thread Blocking:** Workers never sleep or block execution loops during retries.
+2. **Crash Resilience & Guaranteed Execution:** If a worker crashes mid-execution, PostgreSQL atomicity and Kafka durability ensure the next retry attempt is never lost.
+3. **Cluster-Wide Load Balancing:** Retries can be picked up by different worker replicas across nodes.
+
+
 

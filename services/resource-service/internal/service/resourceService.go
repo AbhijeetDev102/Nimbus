@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/AbhijeetDev102/Nimbus/services/resource-service/internal/domain"
 	"github.com/AbhijeetDev102/Nimbus/shared/env"
@@ -51,4 +52,20 @@ func (s *Service) GeneratePSUrl(ctx context.Context, req *types.UploadUrlRequest
 		return nil, err
 	}
 	return response, nil
+}
+
+func (s *Service) GetDownloadUrl(ctx context.Context, id uuid.UUID, expiresIn int64) (string, error) {
+	if expiresIn <= 0 {
+		expiresIn = 3600
+	}
+
+	// 1. Try to find the resource record in PostgreSQL
+	resource, err := s.metadata.GetResource(ctx, id)
+	if err == nil {
+		return s.storage.GeneratePSDownloadUrl(ctx, resource.ObjectKey, expiresIn)
+	}
+
+	// 2. Fallback: If it was a processed output video created directly by a worker
+	processedKey := fmt.Sprintf("resource/processed/%s.mp4", id.String())
+	return s.storage.GeneratePSDownloadUrl(ctx, processedKey, expiresIn)
 }

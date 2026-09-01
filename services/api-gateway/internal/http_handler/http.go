@@ -95,6 +95,31 @@ func (h *httpHandler) HandleUploadUrlRequest(w http.ResponseWriter, r *http.Requ
 
 }
 
+func (h *httpHandler) HandleGetDownloadUrl(w http.ResponseWriter, r *http.Request) {
+	resourceID := r.PathValue("id")
+	if resourceID == "" {
+		http.Error(w, "resource ID is required", http.StatusBadRequest)
+		return
+	}
+
+	response, err := h.resourceGrpcClient.Client.GetDownloadUrl(r.Context(), &pb.GetDownloadUrlRequest{
+		ResourceID: resourceID,
+		ExpiresIn:  3600,
+	})
+	if err != nil {
+		log.Printf("failed to get download url via gRPC: %v", err)
+		http.Error(w, "failed to get download url", http.StatusInternalServerError)
+		return
+	}
+
+	if err := writeJSON(w, http.StatusOK, map[string]string{
+		"download_url": response.GetDownloadUrl(),
+		"resourceId":   response.GetResourceID(),
+	}); err != nil {
+		log.Printf("failed to write JSON response: %v", err)
+	}
+}
+
 func (h *httpHandler) HandleCreateJobRequest(w http.ResponseWriter, r *http.Request) {
 	var reqBody *types.CreateJobRequest
 
@@ -154,7 +179,31 @@ func (h *httpHandler) HandleGetJob(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := writeJSON(w, http.StatusOK, response); err != nil {
+	var params json.RawMessage
+	if len(response.GetParameters()) > 0 {
+		params = json.RawMessage(response.GetParameters())
+	}
+	var metadata json.RawMessage
+	if len(response.GetMetadata()) > 0 {
+		metadata = json.RawMessage(response.GetMetadata())
+	}
+	httpResp := types.GetJobResponse{
+		JobID:            response.GetJobId(),
+		ResourceID:       response.ResourceID,
+		JobType:          response.GetJobType(),
+		Status:           response.GetStatus(),
+		RetryCount:       response.GetRetryCount(),
+		MaxRetries:       response.GetMaxRetries(),
+		ErrorMessage:     response.ErrorMessage,
+		OutputResourceID: response.OutputResourceID,
+		Parameters:       params,
+		Metadata:         metadata,
+		CreatedAt:        response.GetCreatedAt(),
+		StartedAt:        response.StartedAt,
+		CompletedAt:      response.CompletedAt,
+	}
+
+	if err := writeJSON(w, http.StatusOK, httpResp); err != nil {
 		log.Printf("failed to write JSON response: %v", err)
 	}
 }

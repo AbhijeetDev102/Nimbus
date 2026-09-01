@@ -187,6 +187,8 @@ type GetJobResponse struct {
 	MaxRetries       int32                  `protobuf:"varint,6,opt,name=MaxRetries,proto3" json:"MaxRetries,omitempty"`
 	ErrorMessage     *string                `protobuf:"bytes,7,opt,name=ErrorMessage,proto3,oneof" json:"ErrorMessage,omitempty"`
 	OutputResourceID *string                `protobuf:"bytes,8,opt,name=OutputResourceID,proto3,oneof" json:"OutputResourceID,omitempty"`
+	Parameters       []byte                 `protobuf:"bytes,12,opt,name=Parameters,proto3" json:"Parameters,omitempty"`
+	Metadata         []byte                 `protobuf:"bytes,13,opt,name=Metadata,proto3" json:"Metadata,omitempty"`
 	CreatedAt        string                 `protobuf:"bytes,9,opt,name=CreatedAt,proto3" json:"CreatedAt,omitempty"`
 	StartedAt        *string                `protobuf:"bytes,10,opt,name=StartedAt,proto3,oneof" json:"StartedAt,omitempty"`
 	CompletedAt      *string                `protobuf:"bytes,11,opt,name=CompletedAt,proto3,oneof" json:"CompletedAt,omitempty"`
@@ -280,6 +282,20 @@ func (x *GetJobResponse) GetOutputResourceID() string {
 	return ""
 }
 
+func (x *GetJobResponse) GetParameters() []byte {
+	if x != nil {
+		return x.Parameters
+	}
+	return nil
+}
+
+func (x *GetJobResponse) GetMetadata() []byte {
+	if x != nil {
+		return x.Metadata
+	}
+	return nil
+}
+
 func (x *GetJobResponse) GetCreatedAt() string {
 	if x != nil {
 		return x.CreatedAt
@@ -319,7 +335,7 @@ const file_job_proto_rawDesc = "" +
 	"\x05JobId\x18\x01 \x01(\tR\x05JobId\x12\x16\n" +
 	"\x06Status\x18\x02 \x01(\tR\x06Status\"%\n" +
 	"\rGetJobRequest\x12\x14\n" +
-	"\x05JobId\x18\x01 \x01(\tR\x05JobId\"\xd2\x03\n" +
+	"\x05JobId\x18\x01 \x01(\tR\x05JobId\"\x8e\x04\n" +
 	"\x0eGetJobResponse\x12\x14\n" +
 	"\x05JobId\x18\x01 \x01(\tR\x05JobId\x12#\n" +
 	"\n" +
@@ -334,7 +350,11 @@ const file_job_proto_rawDesc = "" +
 	"MaxRetries\x18\x06 \x01(\x05R\n" +
 	"MaxRetries\x12'\n" +
 	"\fErrorMessage\x18\a \x01(\tH\x01R\fErrorMessage\x88\x01\x01\x12/\n" +
-	"\x10OutputResourceID\x18\b \x01(\tH\x02R\x10OutputResourceID\x88\x01\x01\x12\x1c\n" +
+	"\x10OutputResourceID\x18\b \x01(\tH\x02R\x10OutputResourceID\x88\x01\x01\x12\x1e\n" +
+	"\n" +
+	"Parameters\x18\f \x01(\fR\n" +
+	"Parameters\x12\x1a\n" +
+	"\bMetadata\x18\r \x01(\fR\bMetadata\x12\x1c\n" +
 	"\tCreatedAt\x18\t \x01(\tR\tCreatedAt\x12!\n" +
 	"\tStartedAt\x18\n" +
 	" \x01(\tH\x03R\tStartedAt\x88\x01\x01\x12%\n" +

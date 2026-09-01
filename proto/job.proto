@@ -30,6 +30,8 @@ message GetJobResponse{
     int32 MaxRetries = 6;
     optional string ErrorMessage = 7;
     optional string OutputResourceID = 8;
+    bytes Parameters = 12;
+    bytes Metadata = 13;
     string CreatedAt = 9;
     optional string StartedAt = 10;
     optional string CompletedAt = 11;

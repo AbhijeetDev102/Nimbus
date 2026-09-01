@@ -116,6 +116,8 @@ func (h *grpcHandler) GetJob(ctx context.Context, req *pb.GetJobRequest) (*pb.Ge
 		MaxRetries:       int32(job.MaxRetries),
 		ErrorMessage:     errMsg,
 		OutputResourceID: outputResourceID,
+		Parameters:       []byte(job.Parameters),
+		Metadata:         []byte(job.Metadata),
 		CreatedAt:        job.CreatedAt.Format(time.RFC3339),
 		StartedAt:        startedAt,
 		CompletedAt:      completedAt,

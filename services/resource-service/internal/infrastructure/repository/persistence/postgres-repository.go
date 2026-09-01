@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/AbhijeetDev102/Nimbus/services/resource-service/internal/domain"
+	"github.com/google/uuid"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
@@ -32,4 +33,13 @@ func (p *postgresInstance) CreateResource(ctx context.Context, resource *domain.
 		return err
 	}
 	return nil
+}
+
+func (p *postgresInstance) GetResource(ctx context.Context, id uuid.UUID) (*domain.Resource, error) {
+	var resource domain.Resource
+
+	if err := p.Client.WithContext(ctx).First(&resource, "id=?", id).Error; err != nil {
+		return nil, err
+	}
+	return &resource, nil
 }
