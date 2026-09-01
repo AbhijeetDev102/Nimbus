@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"log"
+	"os"
 	"os/signal"
 	"syscall"
 
@@ -48,7 +49,7 @@ func main() {
 	worker.Register("calculator", calculatorHandler)
 
 	// Start the Worker with Gracefull Shutdown
-	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGTERM)
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 	log.Printf("Starting Nimbus Video Worker...")
 	if err := worker.Start(ctx); err != nil && err != context.Canceled {
