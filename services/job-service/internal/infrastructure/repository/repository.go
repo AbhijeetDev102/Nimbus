@@ -2,8 +2,10 @@ package repository
 
 import (
 	"context"
+	"time"
 
 	"github.com/AbhijeetDev102/Nimbus/services/job-service/internal/domain"
+	"github.com/AbhijeetDev102/Nimbus/shared/types"
 	"github.com/google/uuid"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -102,4 +104,59 @@ func (r *JobRepository) GetJobStats(ctx context.Context) (*domain.JobStats, erro
 		return nil, err
 	}
 	return &stats, nil
+}
+
+func (r *JobRepository) FindExpiredRunningJobs(ctx context.Context, now time.Time) ([]*domain.Job, error) {
+	var jobs []*domain.Job
+	err := r.DB.WithContext(ctx).
+		Where("status = ? AND lease_expires_at IS NOT NULL AND lease_expires_at < ?", types.JobRunning, now).
+		Limit(50).
+		Find(&jobs).Error
+
+	if err != nil {
+		return nil, err
+	}
+	return jobs, nil
+}
+
+func (r *JobRepository) ReapExpiredJob(ctx context.Context, job *domain.Job, nextRetryCount int, outboxEvent *domain.OutboxEvent, isFinalFailure bool) error {
+	now := time.Now()
+	var updates map[string]interface{}
+
+	if isFinalFailure {
+		msg := "lease expired: worker heartbeat stopped (max retries exhausted)"
+		updates = map[string]interface{}{
+			"status":        types.JobFailed,
+			"error_message": &msg,
+			"completed_at":  &now,
+			"updated_at":    now,
+		}
+	} else {
+		msg := "lease expired: worker heartbeat stopped, re-queued by reaper"
+		updates = map[string]interface{}{
+			"status":        types.JobQueued,
+			"retry_count":   nextRetryCount,
+			"worker_id":     nil,
+			"error_message": &msg,
+			"updated_at":    now,
+		}
+	}
+
+	return r.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		result := tx.Model(&domain.Job{}).
+			Where("id = ? AND status = ? AND lease_expires_at = ?", job.ID, types.JobRunning, job.LeaseExpiresAt).
+			Updates(updates)
+		if result.Error != nil {
+			return result.Error
+		}
+
+		// Only emit Outbox event if we actually reaped the job
+		if result.RowsAffected > 0 && outboxEvent != nil {
+			if err := tx.Create(outboxEvent).Error; err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
 }

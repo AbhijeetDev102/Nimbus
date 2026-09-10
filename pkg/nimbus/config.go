@@ -3,18 +3,21 @@ package nimbus
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/google/uuid"
 )
 
 // Config holds all infrastructure connection settings for a Nimbus Worker
 type Config struct {
-	WorkerID     uuid.UUID
-	PostgresDSN  string
-	KafkaBrokers []string
-	KafkaGroup   string
-	KafkaTopic   string
-	RedisAddr    string
+	WorkerID          uuid.UUID
+	PostgresDSN       string
+	KafkaBrokers      []string
+	KafkaGroup        string
+	KafkaTopic        string
+	RedisAddr         string
+	LeaseDuration     time.Duration
+	HeartbeatInterval time.Duration
 }
 
 func getEnv(key, defaultVal string) string {
@@ -33,11 +36,13 @@ func ConfigFromEnv() Config {
 	dbName := getEnv("POSTGRES_DB_NAME", "nimbus")
 	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=5432 sslmode=disable", host, user, password, dbName)
 	return Config{
-		WorkerID:     workerID,
-		PostgresDSN:  dsn,
-		KafkaBrokers: []string{getEnv("KAFKA_BROKERS", "localhost:9092")},
-		KafkaGroup:   getEnv("KAFKA_CONSUMER_GROUP", "nimbus-worker-group"),
-		KafkaTopic:   getEnv("KAFKA_JOB_TOPIC", "job.events"),
-		RedisAddr:    getEnv("REDIS_ADDR", "localhost:6379"),
+		WorkerID:          workerID,
+		PostgresDSN:       dsn,
+		KafkaBrokers:      []string{getEnv("KAFKA_BROKERS", "localhost:9092")},
+		KafkaGroup:        getEnv("KAFKA_CONSUMER_GROUP", "nimbus-worker-group"),
+		KafkaTopic:        getEnv("KAFKA_JOB_TOPIC", "job.events"),
+		RedisAddr:         getEnv("REDIS_ADDR", "localhost:6379"),
+		LeaseDuration:     time.Duration(30 * time.Second),
+		HeartbeatInterval: time.Duration(10 * time.Second),
 	}
 }

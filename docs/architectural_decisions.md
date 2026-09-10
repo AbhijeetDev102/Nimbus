@@ -154,3 +154,19 @@ This document tracks all major architectural and design decisions made during th
 2. **Safe Paginated Job Exploration (`GET /jobs`):** Implemented bounded `limit` and `offset` pagination with dynamic filtering by `status` and `job_type`.
 3. **Hero Execution Inspector:** Full lifecycle visibility (`QUEUED ➔ RUNNING ➔ COMPLETED/FAILED`), live WebSocket progress streaming (`/ws/jobs/{id}`), distributed lease tracking (`worker_id`), retry history, and dual input/output inspectors (Direct MinIO video playback and JSON tree inspector).
 **Consequences:** Dramatically reduces operational complexity and resource consumption while delivering a far more coherent, interactive developer experience tailored specifically to distributed job lifecycle management.
+
+---
+
+## ADR 020: Distributed Leases, Worker Heartbeats, and Background Reaper Engine
+**Date:** 2026-09-10\
+**Context:** When workers consume tasks from Kafka and update status to `RUNNING` in PostgreSQL, an unhandled node termination, Kubernetes OOMKill, or process crash leaves the task permanently orphaned in `RUNNING` status because Kafka will not resend an offset that was already acknowledged or skipped by healthy workers. Furthermore, if a stalled worker unfreezes after another worker claims the task, a split-brain execution hazard occurs where two workers attempt to finalize the same job.\
+**Decision:** We implemented a three-tier distributed lease architecture:
+1. **Time-To-Live (TTL) Leases:** Job claims are non-permanent leases recorded with `lease_expires_at` (default 30s) in PostgreSQL. `ClaimJob` allows stealing expired leases (`WHERE status = 'QUEUED' OR (status = 'RUNNING' AND lease_expires_at < NOW())`).
+2. **Worker Heartbeat Goroutines:** Active workers run a cancellable ticker goroutine that periodically calls `w.Heartbeat()` (every 10s) to extend `lease_expires_at = NOW() + 30s`. If the worker dies, heartbeats cease.
+3. **Optimistic Database Fencing:** `CompleteJob` and `FailJob` enforce `WHERE id = :id AND worker_id = :worker_id`. A resurrected worker that lost its lease cannot overwrite a newer worker's output (`RowsAffected == 0`).
+4. **Background Reaper Engine:** A lightweight daemon in `job-service` periodically scans for `status = 'RUNNING' AND lease_expires_at < NOW()`. Reaped jobs are atomically re-queued (`status = 'QUEUED'`, incremented retry count) and published via the Transactional Outbox to Kafka for healthy workers to pick up, or marked `FAILED` if `max_retries` is exhausted.\
+**Consequences:**
+1. **Zero Zombie / Orphaned Jobs:** Dead worker tasks are deterministically recovered in 30-45 seconds.
+2. **Split-Brain Immunity:** Database-level fencing ensures only the active lease holder can commit outputs.
+3. **Non-Blocking Resiliency:** Relies strictly on atomic SQL conditional updates without distributed lock managers (e.g. ZooKeeper/Consul).
+

@@ -103,6 +103,7 @@ type Job struct {
     Parameters       datatypes.JSON `gorm:"type:jsonb"`
     OutputResourceID *uuid.UUID     `gorm:"type:uuid"`
     ErrorMessage     *string        `gorm:"type:text"`
+    LeaseExpiresAt   *time.Time     `gorm:"index"`
     CreatedAt        time.Time
     StartedAt        *time.Time
     CompletedAt      *time.Time
@@ -124,6 +125,7 @@ type Job struct {
 | `Parameters` | `datatypes.JSON` | Nullable (`JSONB`) | Free-form, workload-specific dynamic JSON configuration (e.g. `{"resolution": "1080p", "codec": "h264", "bitrate": "4000k"}`). Gives infinite flexibility to future workloads without altering the DB schema. |
 | `OutputResourceID`| `*uuid.UUID` | Nullable | UUID referencing the newly generated output `Resource` record once processing succeeds. `nil` until completion or if no resource was produced. |
 | `ErrorMessage` | `*string` | Nullable (`TEXT`) | Stores the failure reason or error message if execution fails. Enables client/API error visibility. |
+| `LeaseExpiresAt` | `*time.Time` | `Index`, Nullable | Distributed lease expiration timestamp. Actively extended every 10s by worker heartbeat. If expired (`< NOW()`), the background reaper re-queues the job. |
 | `CreatedAt` | `time.Time` | Non-null | Timestamp when the job was queued. |
 | `StartedAt` | `*time.Time` | Nullable | Timestamp when a worker picked up the job and set it to `RUNNING`. |
 | `CompletedAt` | `*time.Time` | Nullable | Timestamp when execution finalized (succeeded, failed, or was cancelled). |

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/twmb/franz-go/pkg/kgo"
@@ -87,6 +88,28 @@ func (w *Worker) processRecord(ctx context.Context, record *kgo.Record) {
 		return
 	}
 
+	heartbeatCtx, cancelHeartbeat := context.WithCancel(ctx)
+	defer cancelHeartbeat()
+	go func() {
+		ticker := time.NewTicker(w.config.HeartbeatInterval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-heartbeatCtx.Done():
+				return
+			case <-ticker.C:
+				ok, err := w.Heartbeat(heartbeatCtx, job.ID, w.config.WorkerID)
+				if err != nil {
+					log.Printf("[Heartbeat] Error renewing lease for job %s: %v", job.ID, err)
+				} else if !ok {
+					log.Printf("[Heartbeat] Lease lost for job %s! Another worker or reaper claimed it.", job.ID)
+					// If the lease is stolen, we should stop trying
+					return
+				}
+			}
+		}
+	}()
+
 	// dispatch to workload handler (ffmpeg, etc)
 	jobCtx := NewJobContext(ctx, job.ID.String(), newRedisPublisher(w.redis))
 	result, err := w.safeExecute(jobCtx, &job)
@@ -99,7 +122,7 @@ func (w *Worker) processRecord(ctx context.Context, record *kgo.Record) {
 			_ = w.RetryJob(ctx, &job, err.Error())
 		} else {
 			log.Printf("[Job %s] Max retries (%d) exhausted. Failing permanently: %v", job.ID, job.MaxRetries, err)
-			_ = w.FailJob(ctx, job.ID, err.Error())
+			_ = w.FailJob(ctx, job.ID, err.Error(), w.config.WorkerID)
 		}
 	} else {
 		var outputID *uuid.UUID
@@ -108,7 +131,7 @@ func (w *Worker) processRecord(ctx context.Context, record *kgo.Record) {
 			outputID = result.OutputResourceID
 			metadata = result.Metadata
 		}
-		w.CompleteJob(ctx, job.ID, outputID, metadata)
+		w.CompleteJob(ctx, job.ID, outputID, metadata, w.config.WorkerID)
 	}
 
 	// Commit kafka offset

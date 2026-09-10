@@ -40,11 +40,11 @@ type Job struct {
 	ErrorMessage     *string        `json:"error_message,omitempty"`
 	OutputResourceID *uuid.UUID     `json:"output_resource_id,omitempty"`
 	Metadata         datatypes.JSON `json:"metadata,omitempty" gorm:"type:jsonb"`
-
-	CreatedAt   time.Time  `json:"created_at"`
-	StartedAt   *time.Time `json:"started_at,omitempty"`
-	CompletedAt *time.Time `json:"completed_at,omitempty"`
-	UpdatedAt   time.Time  `json:"updated_at"`
+	LeaseExpiresAt   *time.Time     `json:"lease_expires_at,omitempty" gorm:"index"`
+	CreatedAt        time.Time      `json:"created_at"`
+	StartedAt        *time.Time     `json:"started_at,omitempty"`
+	CompletedAt      *time.Time     `json:"completed_at,omitempty"`
+	UpdatedAt        time.Time      `json:"updated_at"`
 }
 
 // ExecutionResult is returned by a JobHandler upon completion

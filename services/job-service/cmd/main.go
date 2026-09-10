@@ -5,6 +5,10 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	grpchandler "github.com/AbhijeetDev102/Nimbus/services/job-service/internal/infrastructure/grpc_handler"
 	"github.com/AbhijeetDev102/Nimbus/services/job-service/internal/infrastructure/repository"
@@ -19,7 +23,8 @@ func main() {
 	if err != nil {
 		log.Println("Warning: No .env file found, relying on system environment variables")
 	}
-	ctx := context.Background()
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer cancel()
 
 	hostName := env.GetString("POSTGRES_HOSTNAME", "localhost")
 	user := env.GetString("POSTGRES_USER", "")
@@ -32,6 +37,11 @@ func main() {
 		log.Fatalln("Failed to connect to Postgres:", err)
 	}
 	log.Println("SUccessfully connected to Postgres instance")
+
+	// Initialize and start the Background Job Reaper
+	reaper := service.NewJobReaper(postgresInstance, 15*time.Second)
+	go reaper.Start(ctx)
+
 	srv := service.NewJobService(postgresInstance)
 
 	// grpc server initialization
