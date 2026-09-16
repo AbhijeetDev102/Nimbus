@@ -170,3 +170,19 @@ This document tracks all major architectural and design decisions made during th
 2. **Split-Brain Immunity:** Database-level fencing ensures only the active lease holder can commit outputs.
 3. **Non-Blocking Resiliency:** Relies strictly on atomic SQL conditional updates without distributed lock managers (e.g. ZooKeeper/Consul).
 
+---
+
+## ADR 021: Automated CI Quality Gates, Race-Detection Testing & Container Build Verification
+**Date:** 2026-09-16\
+**Context:** As Nimbus grew into a multi-service distributed architecture (4 Go backend microservices, shared SDK, and a React/Next.js dashboard), manual testing became prone to regressions. Submitting code without automated gates risks merging concurrency race conditions, unhandled panics, broken database schema migrations, and broken Docker builds.\
+**Decision:** We implemented a 5-stage Continuous Integration (CI) pipeline using GitHub Actions (`.github/workflows/ci.yml`):
+1. **Module & Vet Gate:** Validates Go module cleanliness (`go mod tidy` diff check) and static analysis (`go vet ./...`).
+2. **Race-Detection Automated Testing:** Runs `go test -v -race -coverprofile=coverage.txt -covermode=atomic ./...` on `ubuntu-latest` Linux runners where GCC/ThreadSanitizer is natively available.
+3. **Microservices Matrix Build:** Parallel compilation (`CGO_ENABLED=0 GOOS=linux`) of all backend service binaries (`api-gateway`, `job-service`, `resource-service`, `worker-service`).
+4. **Web Frontend Build:** Verifies TypeScript type-checking and asset bundling (`npm run build`).
+5. **Docker Container Verification:** Validates multi-stage Docker builds across all service Dockerfiles via Buildx without registry push.\
+**Consequences:**
+1. **Zero Regression Merges:** PRs cannot merge if concurrency races, panics, or compilation errors exist.
+2. **Hermetic Reproducibility:** Cloud CI mirrors production container environments identically.
+3. **High Developer Velocity:** Automated feedback arrives in <2 minutes on every push.
+
