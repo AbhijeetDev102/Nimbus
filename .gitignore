@@ -35,3 +35,4 @@ bin/
 .idea/
 .vscode/
 test.mp4
+.tmp/
