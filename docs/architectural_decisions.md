@@ -186,3 +186,19 @@ This document tracks all major architectural and design decisions made during th
 2. **Hermetic Reproducibility:** Cloud CI mirrors production container environments identically.
 3. **High Developer Velocity:** Automated feedback arrives in <2 minutes on every push.
 
+---
+
+## ADR 022: Distributed Worker Registry, Fleet Observability, and Backward-Compatible Job Attribution
+**Date:** 2026-09-16\
+**Context:** In distributed systems, worker identity and lease state are typically opaque to operators. While Nimbus stored `worker_id` and `lease_expires_at` in PostgreSQL for optimistic fencing (ADR 020), this data was invisible in the Control Plane dashboard. Modifying gRPC protobuf contracts requires client/server regeneration across multiple microservices. Furthermore, querying PostgreSQL repeatedly to discover active worker replicas would introduce unnecessary read contention on the transactional database.\
+**Decision:**
+1. **Redis-Backed Worker Registry:** Nimbus Worker SDK (`pkg/nimbus`) writes non-blocking status heartbeats every 3 seconds to a central Redis Hash (`nimbus:workers`) containing worker ID, hostname, execution status (`IDLE` or `BUSY`), active job ID, and heartbeat timestamps.
+2. **O(N) Fleet Health Ingestion:** `api-gateway` exposes `GET /workers` backed by Redis `HGETALL`. Active status is derived based on a 15-second cutoff window; dead/killed workers flip to `OFFLINE` automatically.
+3. **Backward-Compatible Metadata Job Attribution:** Rather than regenerating protobuf stubs, `job-service` enriches the existing `Metadata` JSON payload with `worker_id` and `lease_expires_at`. `api-gateway` unmarshals these fields and surfaces `workerId` and `leaseExpiresAt` directly in the HTTP JSON response.
+4. **Real-Time Control Plane Visualization:** The web dashboard introduces `WorkerRoster` (live fleet list with pulse indicators and worker-based job filtering) and `ActivityFeed` (streaming distributed state transition log).\
+**Consequences:**
+1. **Zero Protobuf Regeneration:** Backward compatible with existing gRPC clients.
+2. **Zero Database Load for Registry:** Worker heartbeat polling bypasses PostgreSQL completely, protecting database IOPS.
+3. **Clear Production Demos:** Operators and stakeholders can visually observe worker failover, lease stealing, and load rebalancing in real time.
+
+

@@ -2,9 +2,12 @@ package httphandler
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
+	"sort"
 	"strconv"
+	"time"
 
 	grpcclient "github.com/AbhijeetDev102/Nimbus/services/api-gateway/internal/grpc_client"
 	"github.com/AbhijeetDev102/Nimbus/services/api-gateway/pkg/types"
@@ -180,29 +183,7 @@ func (h *httpHandler) HandleGetJob(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var params json.RawMessage
-	if len(response.GetParameters()) > 0 {
-		params = json.RawMessage(response.GetParameters())
-	}
-	var metadata json.RawMessage
-	if len(response.GetMetadata()) > 0 {
-		metadata = json.RawMessage(response.GetMetadata())
-	}
-	httpResp := types.GetJobResponse{
-		JobID:            response.GetJobId(),
-		ResourceID:       response.ResourceID,
-		JobType:          response.GetJobType(),
-		Status:           response.GetStatus(),
-		RetryCount:       response.GetRetryCount(),
-		MaxRetries:       response.GetMaxRetries(),
-		ErrorMessage:     response.ErrorMessage,
-		OutputResourceID: response.OutputResourceID,
-		Parameters:       params,
-		Metadata:         metadata,
-		CreatedAt:        response.GetCreatedAt(),
-		StartedAt:        response.StartedAt,
-		CompletedAt:      response.CompletedAt,
-	}
+	httpResp := mapProtoToHTTPJob(response)
 
 	if err := writeJSON(w, http.StatusOK, httpResp); err != nil {
 		log.Printf("failed to write JSON response: %v", err)
@@ -240,8 +221,18 @@ func (h *httpHandler) HandleJobProgressWS(w http.ResponseWriter, r *http.Request
 
 	channelName := "job:progress:" + jobID
 	pubsub := h.redisClient.Subscribe(r.Context(), channelName)
-
 	defer pubsub.Close()
+
+	// 1. Confirm Redis subscription is established
+	if _, err := pubsub.Receive(r.Context()); err != nil {
+		log.Printf("[WebSocket] Failed to subscribe to channel %s: %v", channelName, err)
+		return
+	}
+
+	// 2. Immediate Last-Value Cache push: send current progress if job is already executing
+	if latestPayload, err := h.redisClient.Get(r.Context(), fmt.Sprintf("job:progress:%s:latest", jobID)).Result(); err == nil && latestPayload != "" {
+		_ = conn.WriteMessage(websocket.TextMessage, []byte(latestPayload))
+	}
 
 	ch := pubsub.Channel()
 
@@ -270,8 +261,20 @@ func mapProtoToHTTPJob(pbJob *jobPb.GetJobResponse) types.GetJobResponse {
 		params = json.RawMessage(pbJob.GetParameters())
 	}
 	var metadata json.RawMessage
+	var workerID *string
+	var leaseExpiresAt *string
+
 	if len(pbJob.GetMetadata()) > 0 {
 		metadata = json.RawMessage(pbJob.GetMetadata())
+		var metaMap map[string]interface{}
+		if err := json.Unmarshal(pbJob.GetMetadata(), &metaMap); err == nil {
+			if w, ok := metaMap["worker_id"].(string); ok && w != "" {
+				workerID = &w
+			}
+			if l, ok := metaMap["lease_expires_at"].(string); ok && l != "" {
+				leaseExpiresAt = &l
+			}
+		}
 	}
 	return types.GetJobResponse{
 		JobID:            pbJob.GetJobId(),
@@ -287,6 +290,8 @@ func mapProtoToHTTPJob(pbJob *jobPb.GetJobResponse) types.GetJobResponse {
 		CreatedAt:        pbJob.GetCreatedAt(),
 		StartedAt:        pbJob.StartedAt,
 		CompletedAt:      pbJob.CompletedAt,
+		WorkerID:         workerID,
+		LeaseExpiresAt:   leaseExpiresAt,
 	}
 }
 
@@ -369,3 +374,66 @@ func (h *httpHandler) HandleGetJobStats(w http.ResponseWriter, r *http.Request) 
 		log.Printf("failed to write JSON response: %v", err)
 	}
 }
+
+func (h *httpHandler) HandleListWorkers(w http.ResponseWriter, r *http.Request) {
+	if h.redisClient == nil {
+		_ = writeJSON(w, http.StatusOK, types.ListWorkersResponse{
+			Workers:     []types.WorkerInfo{},
+			TotalCount:  0,
+			ActiveCount: 0,
+		})
+		return
+	}
+
+	res, err := h.redisClient.HGetAll(r.Context(), "nimbus:workers").Result()
+	if err != nil {
+		log.Printf("Failed to query nimbus:workers from Redis: %v", err)
+		_ = writeJSON(w, http.StatusOK, types.ListWorkersResponse{
+			Workers:     []types.WorkerInfo{},
+			TotalCount:  0,
+			ActiveCount: 0,
+		})
+		return
+	}
+
+	var workers []types.WorkerInfo
+	activeCount := 0
+	now := time.Now()
+
+	for _, val := range res {
+		var info types.WorkerInfo
+		if err := json.Unmarshal([]byte(val), &info); err != nil {
+			continue
+		}
+
+		if parsedTime, err := time.Parse(time.RFC3339, info.LastHeartbeat); err == nil {
+			timeSince := now.Sub(parsedTime)
+			if timeSince > 15*time.Second {
+				info.Status = "OFFLINE"
+			} else if info.CurrentJobID != nil && *info.CurrentJobID != "" {
+				info.Status = "BUSY"
+				activeCount++
+			} else {
+				info.Status = "IDLE"
+				activeCount++
+			}
+		} else {
+			if info.Status != "OFFLINE" {
+				activeCount++
+			}
+		}
+
+		workers = append(workers, info)
+	}
+
+	sort.Slice(workers, func(i, j int) bool {
+		return workers[i].Hostname < workers[j].Hostname
+	})
+
+	_ = writeJSON(w, http.StatusOK, types.ListWorkersResponse{
+		Workers:     workers,
+		TotalCount:  len(workers),
+		ActiveCount: activeCount,
+	})
+}
+

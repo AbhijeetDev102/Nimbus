@@ -19,15 +19,30 @@ func NewFFmpegService() *FFmpegService {
 
 type ffprobeOutput struct {
 	Streams []struct {
-		CodecType string `json:"codec_type"` // "video", "audio"
-		CodecName string `json:"codec_name"` // e.g. "h264"
-		Width     int    `json:"width"`
-		Height    int    `json:"height"`
+		CodecType string            `json:"codec_type"` // "video", "audio"
+		CodecName string            `json:"codec_name"` // e.g. "h264"
+		Width     int               `json:"width"`
+		Height    int               `json:"height"`
+		Duration  string            `json:"duration"`
+		Tags      map[string]string `json:"tags"`
 	} `json:"streams"`
 	Format struct {
-		Duration string `json:"duration"` // ⚠️ ffprobe returns duration as a STRING e.g. "120.5000"
-		BitRate  string `json:"bit_rate"` // e.g. "4500000"
+		Duration string            `json:"duration"` // ⚠️ ffprobe returns duration as a STRING e.g. "120.5000"
+		BitRate  string            `json:"bit_rate"` // e.g. "4500000"
+		Tags     map[string]string `json:"tags"`
 	} `json:"format"`
+}
+
+func parseDurationToUs(timeStr string) int64 {
+	parts := strings.Split(timeStr, ":")
+	if len(parts) != 3 {
+		return 0
+	}
+	hours, _ := strconv.ParseFloat(parts[0], 64)
+	mins, _ := strconv.ParseFloat(parts[1], 64)
+	secs, _ := strconv.ParseFloat(parts[2], 64)
+	totalSecs := hours*3600 + mins*60 + secs
+	return int64(totalSecs * 1000000)
 }
 
 func (f *FFmpegService) Probe(ctx context.Context, inputPath string) (*VideoMetaData, error) {
@@ -47,12 +62,28 @@ func (f *FFmpegService) Probe(ctx context.Context, inputPath string) (*VideoMeta
 	var probeOutput ffprobeOutput
 
 	if err := json.Unmarshal(output, &probeOutput); err != nil {
-		return nil, fmt.Errorf("failed to unmarsher the ffprobeoutput : %v", err)
+		return nil, fmt.Errorf("failed to unmarshal the ffprobe output: %v", err)
 	}
 
 	for _, stream := range probeOutput.Streams {
 		if stream.CodecType == "video" {
 			duration, _ := strconv.ParseFloat(probeOutput.Format.Duration, 64)
+			// Fallback 1: Stream-level duration (common in 4K MP4 / MOV)
+			if duration <= 0 && stream.Duration != "" {
+				duration, _ = strconv.ParseFloat(stream.Duration, 64)
+			}
+			// Fallback 2: Format tags (e.g. DURATION=00:01:23.456)
+			if duration <= 0 && probeOutput.Format.Tags != nil {
+				if dStr, ok := probeOutput.Format.Tags["DURATION"]; ok {
+					duration = float64(parseDurationToUs(dStr)) / 1000000.0
+				}
+			}
+			// Fallback 3: Stream tags
+			if duration <= 0 && stream.Tags != nil {
+				if dStr, ok := stream.Tags["DURATION"]; ok {
+					duration = float64(parseDurationToUs(dStr)) / 1000000.0
+				}
+			}
 
 			bitrate, _ := strconv.ParseInt(probeOutput.Format.BitRate, 10, 64)
 
@@ -127,21 +158,36 @@ func (f *FFmpegService) Transcode(ctx context.Context, inputPath string, outputP
 			val := strings.TrimSpace(parts[1])
 			switch key {
 			case "out_time_us":
-				outTimeUs, _ = strconv.ParseInt(val, 10, 64)
+				if val != "N/A" {
+					if parsed, err := strconv.ParseInt(val, 10, 64); err == nil && parsed > 0 {
+						outTimeUs = parsed
+					}
+				}
+			case "out_time_ms":
+				if outTimeUs == 0 && val != "N/A" {
+					if parsed, err := strconv.ParseInt(val, 10, 64); err == nil && parsed > 0 {
+						outTimeUs = parsed
+					}
+				}
+			case "out_time":
+				if outTimeUs == 0 && strings.Contains(val, ":") {
+					outTimeUs = parseDurationToUs(val)
+				}
 			case "speed":
 				speed = val
 			case "fps":
 				fps, _ = strconv.ParseFloat(val, 64)
 			case "progress":
-				if totalDuration > 0 && outTimeUs > 0 {
+				if outTimeUs > 0 && onProgress != nil {
 					outSeconds := float64(outTimeUs) / 1000000.0
-					percent := (outSeconds / totalDuration) * 100.0
-					if percent > 99.0 {
-						percent = 99.0 // Cap at 99% until process finishes cleanly
+					var percent float64
+					if totalDuration > 0 {
+						percent = (outSeconds / totalDuration) * 100.0
+						if percent > 99.0 {
+							percent = 99.0 // Cap at 99% until process finishes cleanly
+						}
 					}
-					if onProgress != nil {
-						onProgress(percent, speed, fps)
-					}
+					onProgress(percent, speed, fps)
 				}
 			}
 		}

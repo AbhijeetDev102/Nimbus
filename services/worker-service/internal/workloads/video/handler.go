@@ -81,6 +81,7 @@ func (h *VideoHandler) Execute(ctx nimbus.Context, job *nimbus.Job) (*nimbus.Exe
 
 	//New implementation with Nimbus SDK
 	onProgress := func(percent float64, speed string, fps float64) {
+		log.Printf("[Job %s] Transcode progress: %.1f%% (speed: %s, fps: %.1f)", job.ID, percent, speed, fps)
 		ctx.ReportProgressDetails(percent, "Transcoding video", map[string]any{"speed": speed, "fps": fps})
 	}
 

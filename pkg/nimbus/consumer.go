@@ -13,6 +13,8 @@ import (
 )
 
 func (w *Worker) Start(ctx context.Context) error {
+	go w.runHeartbeatLoop(ctx)
+
 	for {
 		//poll fetches new records arives or context is cancelled
 
@@ -27,6 +29,9 @@ func (w *Worker) Start(ctx context.Context) error {
 			for _, fetchErr := range errs {
 				log.Printf("Kafka fetch error: %v", fetchErr.Err)
 			}
+			// Invalidate stale cached topic IDs and back off to prevent hot-looping
+			w.kafka.ForceMetadataRefresh()
+			time.Sleep(1 * time.Second)
 			continue
 		}
 
@@ -88,6 +93,14 @@ func (w *Worker) processRecord(ctx context.Context, record *kgo.Record) {
 		return
 	}
 
+	jobIDStr := job.ID.String()
+	w.currentJobID.Store(&jobIDStr)
+	w.PublishWorkerHeartbeat(ctx)
+	defer func() {
+		w.currentJobID.Store(nil)
+		w.PublishWorkerHeartbeat(ctx)
+	}()
+
 	heartbeatCtx, cancelHeartbeat := context.WithCancel(ctx)
 	defer cancelHeartbeat()
 	go func() {
@@ -123,6 +136,13 @@ func (w *Worker) processRecord(ctx context.Context, record *kgo.Record) {
 		} else {
 			log.Printf("[Job %s] Max retries (%d) exhausted. Failing permanently: %v", job.ID, job.MaxRetries, err)
 			_ = w.FailJob(ctx, job.ID, err.Error(), w.config.WorkerID)
+			publisher := newRedisPublisher(w.redis)
+			_ = publisher.Publish(ctx, &ProgressUpdate{
+				JobID:    job.ID.String(),
+				Status:   "FAILED",
+				Progress: 0,
+				Message:  err.Error(),
+			})
 		}
 	} else {
 		var outputID *uuid.UUID
@@ -131,7 +151,16 @@ func (w *Worker) processRecord(ctx context.Context, record *kgo.Record) {
 			outputID = result.OutputResourceID
 			metadata = result.Metadata
 		}
-		w.CompleteJob(ctx, job.ID, outputID, metadata, w.config.WorkerID)
+		if err := w.CompleteJob(ctx, job.ID, outputID, metadata, w.config.WorkerID); err == nil {
+			// Notify real-time subscribers that execution has finalized
+			publisher := newRedisPublisher(w.redis)
+			_ = publisher.Publish(ctx, &ProgressUpdate{
+				JobID:    job.ID.String(),
+				Status:   "COMPLETED",
+				Progress: 100,
+				Message:  "Execution completed successfully",
+			})
+		}
 	}
 
 	// Commit kafka offset

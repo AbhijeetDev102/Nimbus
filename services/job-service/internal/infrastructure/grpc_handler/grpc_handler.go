@@ -80,48 +80,7 @@ func (h *grpcHandler) GetJob(ctx context.Context, req *pb.GetJobRequest) (*pb.Ge
 		return nil, status.Errorf(codes.NotFound, "job not found: %v", err)
 	}
 
-	var errMsg *string
-	if job.ErrorMessage != nil {
-		errMsg = job.ErrorMessage
-	}
-
-	var ResourceID *string
-	if job.ResourceID != nil {
-		s := job.ResourceID.String()
-		ResourceID = &s
-	}
-
-	var outputResourceID *string
-	if job.OutputResourceID != nil {
-		s := job.OutputResourceID.String()
-		outputResourceID = &s
-	}
-	var startedAt *string
-	if job.StartedAt != nil {
-		s := job.StartedAt.Format(time.RFC3339)
-		startedAt = &s
-	}
-	var completedAt *string
-	if job.CompletedAt != nil {
-		s := job.CompletedAt.Format(time.RFC3339)
-		completedAt = &s
-	}
-
-	return &pb.GetJobResponse{
-		JobId:            job.ID.String(),
-		ResourceID:       ResourceID,
-		JobType:          string(job.JobType),
-		Status:           string(job.Status),
-		RetryCount:       int32(job.RetryCount),
-		MaxRetries:       int32(job.MaxRetries),
-		ErrorMessage:     errMsg,
-		OutputResourceID: outputResourceID,
-		Parameters:       []byte(job.Parameters),
-		Metadata:         []byte(job.Metadata),
-		CreatedAt:        job.CreatedAt.Format(time.RFC3339),
-		StartedAt:        startedAt,
-		CompletedAt:      completedAt,
-	}, nil
+	return mapJobToProto(job), nil
 }
 
 func mapJobToProto(job *domain.Job) *pb.GetJobResponse {
@@ -154,6 +113,26 @@ func mapJobToProto(job *domain.Job) *pb.GetJobResponse {
 		completedAt = &s
 	}
 
+	metaBytes := []byte(job.Metadata)
+	if job.WorkerID != nil || job.LeaseExpiresAt != nil {
+		var metaMap map[string]interface{}
+		if len(metaBytes) > 0 {
+			_ = json.Unmarshal(metaBytes, &metaMap)
+		}
+		if metaMap == nil {
+			metaMap = make(map[string]interface{})
+		}
+		if job.WorkerID != nil {
+			metaMap["worker_id"] = job.WorkerID.String()
+		}
+		if job.LeaseExpiresAt != nil {
+			metaMap["lease_expires_at"] = job.LeaseExpiresAt.Format(time.RFC3339)
+		}
+		if updated, err := json.Marshal(metaMap); err == nil {
+			metaBytes = updated
+		}
+	}
+
 	return &pb.GetJobResponse{
 		JobId:            job.ID.String(),
 		ResourceID:       resourceID,
@@ -164,7 +143,7 @@ func mapJobToProto(job *domain.Job) *pb.GetJobResponse {
 		ErrorMessage:     errMsg,
 		OutputResourceID: outputResourceID,
 		Parameters:       []byte(job.Parameters),
-		Metadata:         []byte(job.Metadata),
+		Metadata:         metaBytes,
 		CreatedAt:        job.CreatedAt.Format(time.RFC3339),
 		StartedAt:        startedAt,
 		CompletedAt:      completedAt,

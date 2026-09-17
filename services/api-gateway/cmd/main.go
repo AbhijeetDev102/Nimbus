@@ -61,6 +61,7 @@ func main() {
 	mux.HandleFunc("GET /jobs", httpHandler.HandleListJobs)
 	mux.HandleFunc("GET /jobs/stats", httpHandler.HandleGetJobStats)
 	mux.HandleFunc("GET /jobs/{id}", httpHandler.HandleGetJob)
+	mux.HandleFunc("GET /workers", httpHandler.HandleListWorkers)
 	mux.HandleFunc("GET /ws/jobs/{id}", httpHandler.HandleJobProgressWS) // <-- Real-time WebSocket!
 
 	server := &http.Server{

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -22,5 +23,7 @@ func (p *redisPublisher) Publish(ctx context.Context, update *ProgressUpdate) er
 		return err
 	}
 	channel := fmt.Sprintf("job:progress:%s", update.JobID)
+	// Cache the latest progress tick for instant WebSocket retrieval on connect
+	_ = p.client.Set(ctx, fmt.Sprintf("job:progress:%s:latest", update.JobID), payload, 1*time.Hour).Err()
 	return p.client.Publish(ctx, channel, payload).Err()
 }

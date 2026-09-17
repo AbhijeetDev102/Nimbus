@@ -27,6 +27,8 @@ type GetJobResponse struct {
 	CreatedAt        string          `json:"createdAt"`
 	StartedAt        *string         `json:"startedAt,omitempty"`
 	CompletedAt      *string         `json:"completedAt,omitempty"`
+	WorkerID         *string         `json:"workerId,omitempty"`
+	LeaseExpiresAt   *string         `json:"leaseExpiresAt,omitempty"`
 }
 
 type ListJobsResponse struct {
@@ -43,3 +45,19 @@ type JobStatsResponse struct {
 	Completed int64 `json:"completed"`
 	Failed    int64 `json:"failed"`
 }
+
+type WorkerInfo struct {
+	WorkerID      string  `json:"workerId"`
+	Hostname      string  `json:"hostname"`
+	Status        string  `json:"status"` // "ACTIVE", "BUSY", "IDLE", "OFFLINE"
+	CurrentJobID  *string `json:"currentJobId,omitempty"`
+	LastHeartbeat string  `json:"lastHeartbeat"`
+	StartedAt     string  `json:"startedAt"`
+}
+
+type ListWorkersResponse struct {
+	Workers    []WorkerInfo `json:"workers"`
+	TotalCount int          `json:"totalCount"`
+	ActiveCount int         `json:"activeCount"`
+}
+

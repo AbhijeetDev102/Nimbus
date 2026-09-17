@@ -37,13 +37,39 @@ Nimbus ships with an extensible **Worker SDK (`pkg/nimbus`)** that enables devel
 
 - **Guaranteed Ingestion without Dual-Writes (ADR 005 & ADR 009):** Jobs are saved to PostgreSQL while an `OutboxEvent` is written in the exact same ACID transaction. Debezium streams PostgreSQL WAL changes directly to Kafka, eliminating distributed dual-write inconsistencies.
 - **Direct-to-Storage Architecture (ADR 001 & ADR 013):** Large media assets and binaries bypass API servers completely. Clients upload and download directly to/from S3/MinIO via Presigned `PUT` and `GET` URLs.
-- **Distributed Atomic Leases (ADR 010):** Workers acquire exclusive execution locks using atomic conditional SQL updates (`UPDATE jobs SET status='RUNNING' WHERE status='QUEUED'`). Multiple worker replicas consume from Kafka partitions without race conditions or duplicate execution.
+- **Distributed Atomic Leases (ADR 010 & ADR 020):** Workers acquire exclusive execution locks using atomic conditional SQL updates (`UPDATE jobs SET status='RUNNING' WHERE status='QUEUED'`). Multiple worker replicas consume from Kafka partitions without race conditions or duplicate execution. Zombie workers are fenced with `WHERE worker_id = :id` checks.
+- **Crash Recovery via Job Reaper (ADR 020):** A background daemon continuously scans for jobs whose TTL-based lease has expired (crashed workers). It atomically re-queues them back to Kafka via the Outbox, guaranteeing zero data loss.
 - **Asynchronous Outbox Retries (ADR 018):** When a workload encounters transient failures, the worker atomically updates the job record and re-queues a new `OutboxEvent`. Workers never sleep or block execution loops; retries are re-distributed cluster-wide across Kafka.
 - **Workload Agnosticism (ADR 017):** Core domain models represent arbitrary payloads with zero-copy JSON (`json.RawMessage`) and optional resource bindings.
 - **Sub-Millisecond Observability (ADR 014 & ADR 016):** Workers publish execution ticks over Redis Pub/Sub, throttled at 500ms intervals, which API Gateway streams to client WebSockets (`/ws/jobs/{id}`).
+- **Live Worker Fleet Registry (ADR 022):** Workers publish Redis heartbeats every 3 seconds to `nimbus:workers`. The Control Plane dashboard shows real-time worker status (IDLE/BUSY/OFFLINE), the active job each worker holds, and automatically marks crashed workers as OFFLINE within 15 seconds.
 - **Lightweight Control Plane (ADR 019):** Real-time cluster metrics computed via single-query SQL aggregations (`<2ms`), served through a modern Vite + React SPA.
 
 ---
+
+## 🎬 Demo
+
+> See the full demo script and recording procedure: [docs/demo_script.md](docs/demo_script.md)
+
+The most compelling thing about Nimbus is its **distributed execution behavior under failure**. The demo showcases:
+
+| Scenario | What You See |
+|---|---|
+| 🚀 Multi-worker dispatch | 10 jobs distributed across 3 worker replicas in parallel via Kafka |
+| 💀 Kill a worker mid-job | Dashboard worker turns OFFLINE; Reaper reclaims job; surviving worker finishes it |
+| 🔒 Lease fencing | Resurrected zombie worker is blocked from overwriting a job it no longer owns |
+| ♻️ Retry pipeline | FAIL → re-queue via Outbox → CLAIMED by new worker → COMPLETED |
+
+```bash
+# Quick demo setup
+docker compose up -d --scale worker=3
+go run tools/registerConnector/main.go  # Register Debezium CDC connector
+open http://localhost:5173              # Control Plane dashboard
+```
+
+Then dispatch jobs from the dashboard's **Workload Studio**, kill a worker with `docker kill <container>`, and watch the **Worker Fleet Roster** and **Cluster Activity Feed** show the recovery in real time.
+
+
 
 ## 🏛 System Architecture
 

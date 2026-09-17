@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: minio
-          image: minio/minio
+          image: quay.io/minio/minio
           ports:
             - containerPort: 9000 # Api
             - containerPort: 9001 #console
