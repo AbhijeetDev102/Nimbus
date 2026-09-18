@@ -14,6 +14,23 @@ export interface JobRecord {
   createdAt: string;
   startedAt?: string;
   completedAt?: string;
+  workerId?: string;
+  leaseExpiresAt?: string;
+}
+
+export interface WorkerInfo {
+  workerId: string;
+  hostname: string;
+  status: "ACTIVE" | "BUSY" | "IDLE" | "OFFLINE";
+  currentJobId?: string;
+  lastHeartbeat: string;
+  startedAt: string;
+}
+
+export interface ListWorkersResponse {
+  workers: WorkerInfo[];
+  totalCount: number;
+  activeCount: number;
 }
 
 export interface JobStats {

@@ -71,6 +71,7 @@ export const WorkloadStudio: React.FC<WorkloadStudioProps> = ({ onJobDispatched 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [jsonError, setJsonError] = useState<string | null>(null);
+  const [dispatchedJobId, setDispatchedJobId] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -151,6 +152,7 @@ export const WorkloadStudio: React.FC<WorkloadStudioProps> = ({ onJobDispatched 
       });
 
       setIsSubmitting(false);
+      setDispatchedJobId(res.jobID);
       onJobDispatched(res.jobID);
     } catch (err: any) {
       setError(err.message || "Failed to dispatch job");
@@ -369,6 +371,19 @@ export const WorkloadStudio: React.FC<WorkloadStudioProps> = ({ onJobDispatched 
             />
           </div>
         </div>
+
+        {/* Success Alert */}
+        {dispatchedJobId && (
+          <div className="flex items-center justify-between text-xs text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 p-3 rounded-xl">
+            <div className="flex items-center space-x-2">
+              <CheckCircle className="w-4 h-4 shrink-0 text-emerald-400" />
+              <span>
+                Job dispatched to cluster! ID: <span className="font-mono text-white">{dispatchedJobId.slice(0, 8)}...</span>
+              </span>
+            </div>
+            <span className="text-[11px] text-slate-400 font-mono">Running in background</span>
+          </div>
+        )}
 
         {/* Error Alert */}
         {error && (

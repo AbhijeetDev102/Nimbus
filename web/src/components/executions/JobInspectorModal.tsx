@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import {
   X,
   Copy,
@@ -10,7 +10,7 @@ import {
   Sparkles,
   Zap,
 } from "lucide-react";
-import type { JobRecord, ProgressUpdate } from "../../types";
+import type { JobStatus, JobRecord, ProgressUpdate } from "../../types";
 import { connectJobProgressWS, getDownloadUrl, fetchJobById } from "../../services/api";
 
 interface JobInspectorModalProps {
@@ -30,11 +30,20 @@ export const JobInspectorModal: React.FC<JobInspectorModalProps> = ({
   const [copied, setCopied] = useState(false);
   const [loadingDownload, setLoadingDownload] = useState(false);
 
+  const onJobUpdatedRef = useRef(onJobUpdated);
+  useEffect(() => {
+    onJobUpdatedRef.current = onJobUpdated;
+  });
+
   useEffect(() => {
     setJob(initialJob);
+  }, [initialJob]);
+
+  // Only reset live progress and download URL when opening a DIFFERENT job
+  useEffect(() => {
     setLiveProgress(null);
     setDownloadUrl(null);
-  }, [initialJob]);
+  }, [initialJob?.jobId]);
 
   // 1. If job has an outputResourceId, fetch presigned download URL
   useEffect(() => {
@@ -64,32 +73,64 @@ export const JobInspectorModal: React.FC<JobInspectorModalProps> = ({
   useEffect(() => {
     if (!job?.jobId || (job.status !== "RUNNING" && job.status !== "QUEUED")) return;
 
+    let isMounted = true;
+
+    // Fallback periodic sync while active to guarantee transition even if WS closes early
+    const interval = setInterval(() => {
+      fetchJobById(job.jobId)
+        .then((updated) => {
+          if (!isMounted) return;
+          setJob((prev) => {
+            if (prev && updated.status !== prev.status) {
+              if (onJobUpdatedRef.current) onJobUpdatedRef.current(updated);
+              return updated;
+            }
+            return prev;
+          });
+        })
+        .catch(() => { });
+    }, 2000);
+
     const disconnectWS = connectJobProgressWS(
       job.jobId,
       (update) => {
+        if (!isMounted) return;
         setLiveProgress(update);
-
-        // If job completed over WS, refresh full record
-        if (update.status === "COMPLETED" || update.progress >= 100) {
+        // When worker starts executing, immediately transition job state to RUNNING
+        if (update.status === "RUNNING") {
+          setJob((prev) => {
+            if (!prev || prev.status === "RUNNING") return prev;
+            const updated: JobRecord = { ...prev, status: "RUNNING" };
+            if (onJobUpdatedRef.current) onJobUpdatedRef.current(updated);
+            return updated;
+          });
+        }
+        // If job completed or failed over WS, refresh full record immediately
+        if (update.status === "COMPLETED" || update.status === "FAILED") {
           fetchJobById(job.jobId).then((updated) => {
+            if (!isMounted) return;
             setJob(updated);
-            if (onJobUpdated) onJobUpdated(updated);
+            if (onJobUpdatedRef.current) onJobUpdatedRef.current(updated);
           });
         }
       },
       () => {
+        if (!isMounted) return;
         // WS closed, do a final sync
         fetchJobById(job.jobId).then((updated) => {
+          if (!isMounted) return;
           setJob(updated);
-          if (onJobUpdated) onJobUpdated(updated);
+          if (onJobUpdatedRef.current) onJobUpdatedRef.current(updated);
         });
       }
     );
 
     return () => {
+      isMounted = false;
+      clearInterval(interval);
       disconnectWS();
     };
-  }, [job?.jobId, job?.status]);
+  }, [job?.jobId]);
 
   if (!job) return null;
 
@@ -101,11 +142,12 @@ export const JobInspectorModal: React.FC<JobInspectorModalProps> = ({
 
   const progressValue =
     liveProgress?.progress !== undefined
-      ? liveProgress.progress
+      ? Math.round(liveProgress.progress)
       : job.status === "COMPLETED"
-      ? 100
-      : 0;
+        ? 100
+        : 0;
 
+  const effectiveStatus = (liveProgress?.status as JobStatus) || job.status;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="relative w-full max-w-4xl max-h-[90vh] flex flex-col rounded-2xl bg-gradient-to-b from-slate-900 to-[#080d16] border border-white/10 shadow-2xl overflow-hidden">
@@ -123,17 +165,16 @@ export const JobInspectorModal: React.FC<JobInspectorModalProps> = ({
               <div className="flex items-center space-x-2">
                 <span className="text-base font-bold text-white font-mono">{job.jobType}</span>
                 <span
-                  className={`text-[10px] font-mono uppercase px-2 py-0.5 rounded-full ${
-                    job.status === "COMPLETED"
-                      ? "bg-indigo-500/20 text-indigo-300 border border-indigo-500/30"
-                      : job.status === "RUNNING"
+                  className={`text-[10px] font-mono uppercase px-2 py-0.5 rounded-full ${effectiveStatus === "COMPLETED"
+                    ? "bg-indigo-500/20 text-indigo-300 border border-indigo-500/30"
+                    : effectiveStatus === "RUNNING"
                       ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 animate-pulse"
-                      : job.status === "FAILED"
-                      ? "bg-rose-500/20 text-rose-300 border border-rose-500/30"
-                      : "bg-amber-500/20 text-amber-300 border border-amber-500/30"
-                  }`}
+                      : effectiveStatus === "FAILED"
+                        ? "bg-rose-500/20 text-rose-300 border border-rose-500/30"
+                        : "bg-amber-500/20 text-amber-300 border border-amber-500/30"
+                    }`}
                 >
-                  {job.status}
+                  {effectiveStatus}
                 </span>
               </div>
               <div className="flex items-center space-x-2 mt-0.5 text-xs text-slate-400 font-mono">
@@ -178,8 +219,8 @@ export const JobInspectorModal: React.FC<JobInspectorModalProps> = ({
 
             {liveProgress && (
               <div className="mt-3 flex items-center justify-between text-[11px] font-mono text-slate-400 border-t border-white/5 pt-2">
-                <span>Speed: {liveProgress.speed || "—"}</span>
-                <span>FPS: {liveProgress.fps || "—"}</span>
+                <span>Speed: {liveProgress.speed || liveProgress.metadata?.speed || "—"}</span>
+                <span>FPS: {liveProgress.fps || liveProgress.metadata?.fps || "—"}</span>
                 <span>Status: {liveProgress.status}</span>
               </div>
             )}
@@ -211,6 +252,41 @@ export const JobInspectorModal: React.FC<JobInspectorModalProps> = ({
               <span className="text-slate-300">
                 {job.completedAt ? new Date(job.completedAt).toLocaleTimeString() : "—"}
               </span>
+            </div>
+          </div>
+
+          {/* Worker & Lease Attribution (Distributed Engine) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-mono">
+            <div className="bg-slate-950/60 p-3.5 rounded-xl border border-cyan-500/20 flex items-center justify-between">
+              <div>
+                <span className="text-slate-500 block text-[10px] uppercase font-bold">Claimed Worker</span>
+                <span className="text-cyan-300 font-semibold">
+                  {job.workerId ? `worker-${job.workerId.slice(0, 8)}` : "Unassigned / Released"}
+                </span>
+              </div>
+              {job.workerId && (
+                <span className="px-2 py-0.5 rounded text-[10px] bg-cyan-500/10 text-cyan-300 border border-cyan-500/30">
+                  Fenced Lease
+                </span>
+              )}
+            </div>
+
+            <div className="bg-slate-950/60 p-3.5 rounded-xl border border-white/5 flex items-center justify-between">
+              <div>
+                <span className="text-slate-500 block text-[10px] uppercase font-bold">Distributed Lease TTL</span>
+                <span className="text-slate-300">
+                  {job.leaseExpiresAt
+                    ? new Date(job.leaseExpiresAt).toLocaleTimeString()
+                    : job.status === "COMPLETED"
+                      ? "Released on completion"
+                      : "No active lease"}
+                </span>
+              </div>
+              {effectiveStatus === "RUNNING" && (
+                <span className="px-2 py-0.5 rounded text-[10px] bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 animate-pulse">
+                  Renewing
+                </span>
+              )}
             </div>
           </div>
 
@@ -306,11 +382,11 @@ export const JobInspectorModal: React.FC<JobInspectorModalProps> = ({
                 </div>
               ) : (
                 <div className="flex-1 rounded-xl border border-dashed border-slate-800 flex items-center justify-center p-6 text-center text-xs text-slate-500">
-                  {job.status === "RUNNING"
+                  {effectiveStatus === "RUNNING"
                     ? "Execution in progress..."
-                    : job.status === "QUEUED"
-                    ? "Waiting in queue for worker lease..."
-                    : "No output payload generated."}
+                    : effectiveStatus === "QUEUED"
+                      ? "Waiting in queue for worker lease..."
+                      : "No output payload generated."}
                 </div>
               )}
             </div>

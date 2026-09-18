@@ -1,11 +1,13 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Navbar } from "./components/layout/Navbar";
 import { ClusterStats } from "./components/overview/ClusterStats";
 import { WorkloadStudio } from "./components/studio/WorkloadStudio";
 import { ExecutionsTable } from "./components/executions/ExecutionsTable";
 import { JobInspectorModal } from "./components/executions/JobInspectorModal";
-import type { JobRecord, JobStats } from "./types";
-import { fetchJobStats, fetchJobs, fetchJobById } from "./services/api";
+import { WorkerRoster } from "./components/overview/WorkerRoster";
+import { ActivityFeed, type ActivityEvent } from "./components/overview/ActivityFeed";
+import type { JobRecord, JobStats, WorkerInfo } from "./types";
+import { fetchJobStats, fetchJobs, fetchJobById, fetchWorkers } from "./services/api";
 import { Activity, Terminal, ArrowRight } from "lucide-react";
 
 export function App() {
@@ -19,9 +21,17 @@ export function App() {
   const [jobTypeFilter, setJobTypeFilter] = useState("ALL");
   const [searchQuery, setSearchQuery] = useState("");
 
+  const [workers, setWorkers] = useState<WorkerInfo[]>([]);
+  const [activeWorkerCount, setActiveWorkerCount] = useState(0);
+  const [workerFilter, setWorkerFilter] = useState<string | null>(null);
+  const [activityEvents, setActivityEvents] = useState<ActivityEvent[]>([]);
+
   const [inspectedJob, setInspectedJob] = useState<JobRecord | null>(null);
   const [loadingStats, setLoadingStats] = useState(false);
   const [loadingJobs, setLoadingJobs] = useState(false);
+  const [loadingWorkers, setLoadingWorkers] = useState(false);
+
+  const prevJobsMapRef = useRef<Map<string, JobRecord>>(new Map());
 
   // 1. Fetch Stats
   const loadStats = useCallback(async () => {
@@ -36,22 +46,126 @@ export function App() {
     }
   }, []);
 
-  // 2. Fetch Jobs
-  const loadJobs = useCallback(async () => {
+  // 2. Fetch Workers
+  const loadWorkers = useCallback(async () => {
     try {
-      setLoadingJobs(true);
+      setLoadingWorkers(true);
+      const data = await fetchWorkers();
+      setWorkers(data.workers || []);
+      setActiveWorkerCount(data.activeCount || 0);
+    } catch (e) {
+      console.error("Failed to load workers:", e);
+    } finally {
+      setLoadingWorkers(false);
+    }
+  }, []);
+
+  // 3. Fetch Jobs & synthesize activity events
+  const loadJobs = useCallback(async (silent = false) => {
+    try {
+      if (!silent) setLoadingJobs(true);
       const data = await fetchJobs({
         limit,
         offset,
         status: statusFilter,
         jobType: jobTypeFilter,
       });
-      setJobs(data.jobs || []);
+
+      const newJobs = data.jobs || [];
+      setJobs(newJobs);
       setTotalCount(data.totalCount || 0);
+
+      // Event synthesis
+      const prevMap = prevJobsMapRef.current;
+      const detectedEvents: ActivityEvent[] = [];
+
+      if (prevMap.size === 0 && newJobs.length > 0) {
+        // Initial populate (newest 5)
+        newJobs.slice(0, 5).forEach((j) => {
+          detectedEvents.push({
+            id: `init-${j.jobId}-${Date.now()}`,
+            type:
+              j.status === "COMPLETED"
+                ? "COMPLETED"
+                : j.status === "RUNNING"
+                  ? "CLAIMED"
+                  : j.status === "FAILED"
+                    ? "FAILED"
+                    : "DISPATCHED",
+            jobId: j.jobId,
+            jobType: j.jobType,
+            workerId: j.workerId,
+            timestamp: new Date(j.createdAt),
+          });
+        });
+      } else {
+        newJobs.forEach((j) => {
+          const prev = prevMap.get(j.jobId);
+          if (!prev) {
+            // Brand new job
+            detectedEvents.unshift({
+              id: `disp-${j.jobId}-${Date.now()}`,
+              type: "DISPATCHED",
+              jobId: j.jobId,
+              jobType: j.jobType,
+              timestamp: new Date(),
+            });
+          } else {
+            // Status transitions
+            if (prev.status !== "RUNNING" && j.status === "RUNNING") {
+              detectedEvents.unshift({
+                id: `claim-${j.jobId}-${Date.now()}`,
+                type: "CLAIMED",
+                jobId: j.jobId,
+                jobType: j.jobType,
+                workerId: j.workerId,
+                timestamp: new Date(),
+              });
+            } else if (prev.status !== "COMPLETED" && j.status === "COMPLETED") {
+              detectedEvents.unshift({
+                id: `comp-${j.jobId}-${Date.now()}`,
+                type: "COMPLETED",
+                jobId: j.jobId,
+                jobType: j.jobType,
+                workerId: j.workerId,
+                timestamp: new Date(),
+              });
+            } else if (prev.status !== "FAILED" && j.status === "FAILED") {
+              detectedEvents.unshift({
+                id: `fail-${j.jobId}-${Date.now()}`,
+                type: "FAILED",
+                jobId: j.jobId,
+                jobType: j.jobType,
+                workerId: j.workerId,
+                timestamp: new Date(),
+              });
+            } else if (j.retryCount > prev.retryCount) {
+              detectedEvents.unshift({
+                id: `retry-${j.jobId}-${Date.now()}`,
+                type: "RETRY",
+                jobId: j.jobId,
+                jobType: j.jobType,
+                workerId: j.workerId,
+                timestamp: new Date(),
+                details: `attempt ${j.retryCount + 1}/${j.maxRetries}`,
+              });
+            }
+          }
+        });
+      }
+
+      if (detectedEvents.length > 0) {
+        setActivityEvents((prev) => [...detectedEvents, ...prev].slice(0, 35));
+      }
+
+      // Update map
+      const nextMap = new Map<string, JobRecord>();
+      newJobs.forEach((j) => nextMap.set(j.jobId, j));
+      prevJobsMapRef.current = nextMap;
     } catch (e) {
       console.error("Failed to load jobs:", e);
     } finally {
-      setLoadingJobs(false);
+      if (!silent) setLoadingJobs(false);
     }
   }, [limit, offset, statusFilter, jobTypeFilter]);
 
@@ -59,29 +173,33 @@ export function App() {
   useEffect(() => {
     loadStats();
     loadJobs();
+    loadWorkers();
 
     const interval = setInterval(() => {
       loadStats();
-    }, 4000);
+      loadWorkers();
+      loadJobs(true);
+    }, 3000);
 
     return () => clearInterval(interval);
-  }, [loadStats, loadJobs]);
+  }, [loadStats, loadJobs, loadWorkers]);
 
-  const handleJobDispatched = async (jobId: string) => {
+  const handleJobDispatched = async (_jobId: string) => {
     loadStats();
     loadJobs();
-    try {
-      const newJob = await fetchJobById(jobId);
-      setInspectedJob(newJob);
-    } catch (e) {
-      console.error("Failed to open dispatched job:", e);
-    }
+    loadWorkers();
+    // Do not automatically pop up the modal; user can click any job to inspect
   };
 
   const handleRefreshAll = () => {
     loadStats();
     loadJobs();
+    loadWorkers();
   };
+
+  const displayedJobs = workerFilter
+    ? jobs.filter((j) => j.workerId === workerFilter)
+    : jobs;
 
   return (
     <div className="min-h-screen bg-[#06090e] text-slate-100 flex flex-col selection:bg-cyan-500 selection:text-black">
@@ -90,7 +208,7 @@ export function App() {
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         onRefresh={handleRefreshAll}
-        isRefreshing={loadingStats || loadingJobs}
+        isRefreshing={loadingStats || loadingJobs || loadingWorkers}
       />
 
       {/* Main Container */}
@@ -103,42 +221,64 @@ export function App() {
           <div className="space-y-8">
             {/* Quick Dispatch Banner & Studio Shortcut */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-              {/* Workload Studio on Left */}
-              <div className="lg:col-span-7">
+              {/* Workload Studio + Activity Feed on Left */}
+              <div className="lg:col-span-7 space-y-6">
                 <WorkloadStudio onJobDispatched={handleJobDispatched} />
+                <ActivityFeed
+                  events={activityEvents}
+                  onSelectJob={(j) => setInspectedJob(j)}
+                  allJobs={jobs}
+                />
               </div>
 
-              {/* Live Cluster Health / Info on Right */}
+              {/* Live Cluster Workers + Architecture on Right */}
               <div className="lg:col-span-5 space-y-4">
-                <div className="rounded-2xl bg-gradient-to-b from-slate-900/90 to-[#080d16]/90 p-6 border border-white/10 shadow-xl space-y-4">
+                <WorkerRoster
+                  workers={workers}
+                  activeCount={activeWorkerCount}
+                  loading={loadingWorkers}
+                  activeWorkerFilter={workerFilter}
+                  onFilterByWorker={(wId) => setWorkerFilter(wId || null)}
+                  onSelectJob={async (jId) => {
+                    const found = jobs.find((j) => j.jobId === jId);
+                    if (found) {
+                      setInspectedJob(found);
+                    } else {
+                      try {
+                        const fetched = await fetchJobById(jId);
+                        setInspectedJob(fetched);
+                      } catch (e) {
+                        console.error(e);
+                      }
+                    }
+                  }}
+                />
+
+                <div className="rounded-2xl bg-gradient-to-b from-slate-900/90 to-[#080d16]/90 p-5 border border-white/10 shadow-xl space-y-3">
                   <div className="flex items-center space-x-2 text-cyan-400 font-mono text-xs uppercase tracking-wider font-semibold">
                     <Activity className="w-4 h-4" />
-                    <span>Engine Architecture</span>
+                    <span>Resilience Architecture</span>
                   </div>
-                  <h3 className="text-base font-bold text-white tracking-tight">
-                    Cloud-Native Job Execution
-                  </h3>
                   <p className="text-xs text-slate-400 leading-relaxed">
-                    Nimbus decouples ingestion from compute via Transactional Outbox, Debezium CDC,
-                    Kafka partitioning, and distributed atomic conditional leases.
+                    Transactional Outbox pattern with Debezium CDC and Kafka guarantees zero job loss. Distributed conditional leases prevent split-brain execution across worker crashes.
                   </p>
 
-                  <div className="pt-2 border-t border-white/10 grid grid-cols-2 gap-3 text-xs font-mono">
-                    <div className="bg-slate-950 p-2.5 rounded-xl border border-white/5">
-                      <span className="text-slate-500 block text-[10px]">Storage Provider</span>
+                  <div className="pt-2 border-t border-white/10 grid grid-cols-2 gap-2 text-xs font-mono">
+                    <div className="bg-slate-950 p-2 rounded-xl border border-white/5">
+                      <span className="text-slate-500 block text-[10px]">Storage</span>
                       <span className="text-cyan-300 font-semibold">MinIO / S3</span>
                     </div>
-                    <div className="bg-slate-950 p-2.5 rounded-xl border border-white/5">
-                      <span className="text-slate-500 block text-[10px]">Message Bus</span>
+                    <div className="bg-slate-950 p-2 rounded-xl border border-white/5">
+                      <span className="text-slate-500 block text-[10px]">Stream</span>
                       <span className="text-purple-300 font-semibold">Kafka + Franz-go</span>
                     </div>
-                    <div className="bg-slate-950 p-2.5 rounded-xl border border-white/5">
-                      <span className="text-slate-500 block text-[10px]">Telemetry</span>
-                      <span className="text-emerald-300 font-semibold">Redis Pub/Sub</span>
+                    <div className="bg-slate-950 p-2 rounded-xl border border-white/5">
+                      <span className="text-slate-500 block text-[10px]">Registry</span>
+                      <span className="text-emerald-300 font-semibold">Redis Heartbeats</span>
                     </div>
-                    <div className="bg-slate-950 p-2.5 rounded-xl border border-white/5">
-                      <span className="text-slate-500 block text-[10px]">Resilience</span>
-                      <span className="text-amber-300 font-semibold">Outbox Retries</span>
+                    <div className="bg-slate-950 p-2 rounded-xl border border-white/5">
+                      <span className="text-slate-500 block text-[10px]">Lease Recovery</span>
+                      <span className="text-amber-300 font-semibold">Job Reaper Daemon</span>
                     </div>
                   </div>
                 </div>
@@ -167,9 +307,16 @@ export function App() {
             {/* Recent Executions Preview */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400 font-mono">
-                  Recent Executions
-                </h3>
+                <div className="flex items-center space-x-3">
+                  <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400 font-mono">
+                    Recent Executions
+                  </h3>
+                  {workerFilter && (
+                    <span className="text-xs font-mono px-2 py-0.5 rounded-md bg-cyan-500/10 text-cyan-300 border border-cyan-500/20">
+                      Filtered by worker-{workerFilter.slice(0, 8)}
+                    </span>
+                  )}
+                </div>
                 <button
                   onClick={() => setActiveTab("executions")}
                   className="text-xs text-cyan-400 hover:underline font-mono cursor-pointer"
@@ -178,8 +325,8 @@ export function App() {
                 </button>
               </div>
               <ExecutionsTable
-                jobs={jobs.slice(0, 5)}
-                totalCount={totalCount}
+                jobs={displayedJobs.slice(0, 5)}
+                totalCount={workerFilter ? displayedJobs.length : totalCount}
                 limit={limit}
                 offset={offset}
                 statusFilter={statusFilter}
@@ -212,11 +359,19 @@ export function App() {
                   Real-time audit log of all jobs processed by worker replicas
                 </p>
               </div>
+              {workerFilter && (
+                <button
+                  onClick={() => setWorkerFilter(null)}
+                  className="text-xs font-mono px-3 py-1.5 rounded-xl bg-slate-800 text-slate-300 hover:text-white border border-white/10 transition-colors"
+                >
+                  Clear Worker Filter ✕
+                </button>
+              )}
             </div>
 
             <ExecutionsTable
-              jobs={jobs}
-              totalCount={totalCount}
+              jobs={displayedJobs}
+              totalCount={workerFilter ? displayedJobs.length : totalCount}
               limit={limit}
               offset={offset}
               statusFilter={statusFilter}
@@ -240,9 +395,10 @@ export function App() {
           job={inspectedJob}
           onClose={() => setInspectedJob(null)}
           onJobUpdated={(updated) => {
-            setInspectedJob(updated);
+            setInspectedJob((prev) => (prev ? updated : null));
             loadStats();
             loadJobs();
+            loadWorkers();
           }}
         />
       )}

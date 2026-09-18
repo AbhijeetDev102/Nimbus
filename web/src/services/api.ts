@@ -2,12 +2,28 @@ import type {
   JobRecord,
   JobStats,
   ListJobsResponse,
+  ListWorkersResponse,
   ProgressUpdate,
   UploadUrlResponse,
   DownloadUrlResponse,
 } from "../types";
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8081";
+const getDefaultApiBase = () => {
+  if (typeof window !== "undefined" && window.location && window.location.hostname) {
+    return `http://${window.location.hostname}:8081`;
+  }
+  return "http://localhost:8081";
+};
+
+const API_BASE = import.meta.env.VITE_API_URL || getDefaultApiBase();
+
+export async function fetchWorkers(): Promise<ListWorkersResponse> {
+  const res = await fetch(`${API_BASE}/workers`);
+  if (!res.ok) {
+    throw new Error(`Failed to fetch workers: ${res.statusText}`);
+  }
+  return res.json();
+}
 
 export async function fetchJobStats(): Promise<JobStats> {
   const res = await fetch(`${API_BASE}/jobs/stats`);
@@ -131,10 +147,16 @@ export function connectJobProgressWS(
   const wsUrl = `${wsProto}//${host}/ws/jobs/${jobId}`;
 
   const ws = new WebSocket(wsUrl);
+  let isManualClose = false;
+
+  ws.onopen = () => {
+    console.log(`[WebSocket] Connected to live progress stream: ${wsUrl}`);
+  };
 
   ws.onmessage = (event) => {
     try {
       const data: ProgressUpdate = JSON.parse(event.data);
+      console.log(`[WebSocket] Job ${jobId} progress: ${data.progress}%`, data);
       onUpdate(data);
     } catch (e) {
       console.error("Failed to parse WS update:", e);
@@ -142,14 +164,17 @@ export function connectJobProgressWS(
   };
 
   ws.onerror = (err) => {
-    console.error("WebSocket error:", err);
+    console.warn(`[WebSocket] Connection error on ${wsUrl}:`, err);
   };
 
   ws.onclose = () => {
-    if (onClose) onClose();
+    if (!isManualClose && onClose) {
+      onClose();
+    }
   };
 
   return () => {
+    isManualClose = true;
     if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
       ws.close();
     }
