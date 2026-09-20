@@ -15,6 +15,7 @@ spec:
       containers:
         - name: nimbus-dashboard
           image: nimbus-dashboard
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 3000
           resources:
@@ -31,6 +32,7 @@ kind: Service
 metadata:
   name: nimbus-dashboard
 spec:
+  type: LoadBalancer
   selector:
     app: nimbus-dashboard
   ports:

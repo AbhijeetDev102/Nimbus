@@ -15,6 +15,7 @@ spec:
       containers:
         - name: job-service
           image: nimbus-job-service
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 9094
           env:

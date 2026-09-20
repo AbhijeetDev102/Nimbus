@@ -15,6 +15,7 @@ spec:
       containers:
         - name: worker-service
           image: nimbus-worker-service
+          imagePullPolicy: IfNotPresent
           env:
             - name: POSTGRES_HOSTNAME
               valueFrom:

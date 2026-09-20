@@ -15,6 +15,7 @@ spec:
       containers:
         - name: api-gateway
           image: nimbus-api-gateway
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8081
           env:
@@ -45,6 +46,7 @@ kind: Service
 metadata:
   name: api-gateway
 spec:
+  type: LoadBalancer
   selector:
     app: api-gateway
   ports:

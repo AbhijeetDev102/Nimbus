@@ -15,6 +15,7 @@ spec:
       containers:
         - name: resource-service
           image: nimbus-resource-service
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 9093
           resources:
